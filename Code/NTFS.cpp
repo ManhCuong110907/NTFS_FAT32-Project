@@ -22,18 +22,19 @@ int64_t getBytes(BYTE* sector, int offset, int length) {
 long long getSizeVolume(VBR VBR) {
     return VBR.TotalSectors * VBR.BytesPerSector;
 }
-void getTime(const char charTime[8], Time& time) {
-    FILETIME ftTime;
-    memcpy(&ftTime, charTime, sizeof(FILETIME));
+void getTime(const char CreationTime[8], Time& time) {
+    FILETIME ftCreationTime;
+    memcpy(&ftCreationTime, CreationTime, sizeof(FILETIME));
 
-    SYSTEMTIME stTime;
-    FileTimeToSystemTime(&ftTime, &stTime);
-    time.Year = stTime.wYear;
-    time.Month = stTime.wMonth;
-    time.Day = stTime.wDay;
-    time.Hour = stTime.wHour;
-    time.Minute = stTime.wMinute;
-    time.Second = stTime.wSecond;
+    SYSTEMTIME stCreationTime;
+    FileTimeToSystemTime(&ftCreationTime, &stCreationTime);
+
+    time.Year = stCreationTime.wYear;
+    time.Month = stCreationTime.wMonth;
+    time.Day = stCreationTime.wDay;
+    time.Hour = stCreationTime.wHour;
+    time.Minute = stCreationTime.wMinute;
+    time.Second = stCreationTime.wSecond;
 }
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR) {
@@ -66,14 +67,14 @@ void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry) {
     HeaderMFTEntry.EntrySize = getBytes(MFTEntry, 0x1C, 4);
     HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);  
 }
-void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry HeaderMFTEntry, Content &content, int ContentAttributeOffset) {
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Content &content, int ContentAttributeOffset) {
     //StandardContent
     if(content.Type == 0x10) {
         StandardContent* standardContent = new StandardContent;
         memcpy(standardContent->CreationTime, MFTEntry + ContentAttributeOffset, 8);
         memcpy(standardContent->ModificationTime, MFTEntry + ContentAttributeOffset + 0x08, 8);
         content = *standardContent;
-        getTime(standardContent->CreationTime, listFile.);
+        getTime(standardContent->CreationTime, HeaderMFTEntry.CreationTime);
     }
     //FileNameContent
     else if(content.Type == 0x30) {
@@ -83,15 +84,24 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry HeaderMFTEntry, Content
         fileNameContent->NameLength = MFTEntry[ContentAttributeOffset + 0x40];
         fileNameContent->Name = string((char*)(MFTEntry + ContentAttributeOffset + 0x42), fileNameContent->NameLength*2); //UTF-16 mỗi ký tự có 2 bytes
         content = *fileNameContent;
-        if((isBitSet(fileNameContent->Attribute, 5) || isBitSet(fileNameContent->Attribute, 28)) && HeaderMFTEntry.ID >=37 )
-            listFile.push_back(make_pair(HeaderMFTEntry.ID, static_cast<int>(fileNameContent->ParentDirectory)));  
+        if((isBitSet(fileNameContent->Attribute, 5) || isBitSet(fileNameContent->Attribute, 28)) && HeaderMFTEntry.ID >=37)
+        {
+            HeaderMFTEntry.ParentID = fileNameContent->ParentDirectory;
+            HeaderMFTEntry.Filename = fileNameContent->Name;
+            if(isBitSet(fileNameContent->Attribute, 28))
+                HeaderMFTEntry.FileAttribute = 1; //Folder
+            else if(isBitSet(fileNameContent->Attribute, 5))
+                HeaderMFTEntry.FileAttribute = 0;  //File
+            listFile.push_back(make_pair(HeaderMFTEntry.ID, fileNameContent->ParentDirectory));
+        }
+             
         //cout << fileNameContent->Name << endl;
     }
     else if(content.Type == 0x80) {
         //cout << "Data" << endl;
     }
 }
-void readAttribute(BYTE* MFTEntry,HeaderMFTEntry HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset) {
+void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset) {
     //Header
     attribute.Type = getBytes(MFTEntry, HeaderAttributeOffset, 4);
     attribute.Length = getBytes(MFTEntry, HeaderAttributeOffset + 0x04, 4);
@@ -107,11 +117,8 @@ void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry) {
     readHeaderMFTEntry(Buffer_MFTEntry, MFTEntry.Header);
     int HeaderAttributeOffset = MFTEntry.Header.FirstAttrOffset;
     int nAttribute = 0;
-    File file;
-    file.ID = MFTEntry.Header.ID;
-    file.TotalSize = MFTEntry.Header.UsedSize; 
     while(!EndMFTEntry(Buffer_MFTEntry, HeaderAttributeOffset)){
-        readAttribute(Buffer_MFTEntry, MFTEntry.Header, MFTEntry.ListAttribute[nAttribute], HeaderAttributeOffset, file);
+        readAttribute(Buffer_MFTEntry, MFTEntry.Header, MFTEntry.ListAttribute[nAttribute], HeaderAttributeOffset);
         HeaderAttributeOffset += MFTEntry.ListAttribute[nAttribute].Length;
         nAttribute++;
     }
@@ -177,26 +184,41 @@ void printVBR(VBR &VBR) {
     cout << " MFTMirrCluster: " << VBR.MFTMirrCluster << endl;
     cout << " BytesPerEntry: " << (int)VBR.BytesPerEntry << endl;
 }
-
-//printFolderandFile
-// void printFolderAndFile(MFT &MFT){
-//     for(int i = 0;i < MFT.nMFTEntry;i++){
-//         for(int j = 0; j < listFile.size();j++){
-//             if(MFT.listMFTEntry[i].Header.ID == listFile[j].first && listFile[j].second == 5){
-//                 cout << "File: " << endl;
-//                 cout << "ID: " << MFT.listMFTEntry[i].Header.ID << endl;
-//                 printFolderAndFile(MFT);
-//             }
-//         }
-//     }
-// }
+string getFileName(MFT &MFT, int ID) {
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            return MFT.listMFTEntry[i].Header.Filename;
+        }
+    }
+    return "";
+}
+string getFileAttribute(MFT &MFT, int ID) {
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            if(MFT.listMFTEntry[i].Header.FileAttribute == 0)
+                return "File";
+            else if(MFT.listMFTEntry[i].Header.FileAttribute == 1)
+                return "Folder";
+        }
+    }
+    return "";
+}
+Time getCreationTime(MFT &MFT, int ID) {
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            return MFT.listMFTEntry[i].Header.CreationTime;
+        }
+    }
+    Time time;
+    return time;
+}
 void printFolderAndFile(MFT &MFT, int parentFolderID, int level = 0) {
     for(auto& it : listFile) {
         if(it.second == parentFolderID) {
             for(int i = 0; i < level; i++) {
                 cout << "\t";
             }
-            cout << "ID: " << it.first << endl;
+            cout <<getFileName(MFT, it.first)  <<" - ID: " << it.first << " -Type: "<< getFileAttribute(MFT, it.first)<<" -Time: "<< getCreationTime(MFT, it.first).Year<< endl;
             printFolderAndFile(MFT, it.first, level + 1);
         }
     }
