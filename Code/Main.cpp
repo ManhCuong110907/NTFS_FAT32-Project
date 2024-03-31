@@ -1,20 +1,17 @@
 #include"Main.h"
-int main()
-{
-    ifstream drive("D", ios::binary);
-    if(!drive.is_open())
-    {
-        cout << "Can't open drive" << endl;
-        return 0;
+int main(){
+    const char* drive = "\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
+    HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    
+    if (hDrive == INVALID_HANDLE_VALUE) {
+        std::cerr << "Can't open disk" << std::endl;
+        return 1;
     }
     VBR VBR;
-    readVBR(drive, VBR);
-    cout << "Bytes per sector: " << VBR.BytesPerSector << endl;
-    cout << "Sectors per cluster: " << (int)VBR.SectorsPerCluster << endl;
-    cout << "Sectors per track: " << VBR.SectorsPerTrack << endl;
-    cout << "Number of heads: " << VBR.NumberOfHeads << endl;
-    cout << "Total sectors: " << VBR.TotalSectors << endl;
-    cout << "MFT cluster: " << VBR.MFTCluster << endl;
-    cout << "MFT mirror cluster: " << VBR.MFTMirrCluster << endl;
-    cout << "Bytes per entry: " << (int)VBR.BytesPerEntry << endl;
+    readVBR(hDrive, VBR);
+    //printVBR(VBR);
+    MFT MFT;
+    readMFT(hDrive, MFT, VBR);
+    printFolderAndFile(MFT, 5, 0);
+    CloseHandle(hDrive); // Đóng handle của ổ đĩa
 }

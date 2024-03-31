@@ -1,37 +1,204 @@
 #include "NTFS.h"
-void readVBR(ifstream &drive, VBR &VBR) {
-    drive.seekg(11, ios::beg);
-    drive.read((char*)&VBR.BytesPerSector, sizeof(VBR.BytesPerSector));
-    drive.read((char*)&VBR.SectorsPerCluster, sizeof(VBR.SectorsPerCluster));
-    drive.seekg(24, ios::beg);
-    drive.read((char*)&VBR.SectorsPerTrack, sizeof(VBR.SectorsPerTrack));
-    drive.read((char*)&VBR.NumberOfHeads, sizeof(VBR.NumberOfHeads));
-    drive.seekg(40, ios::beg);
-    drive.read((char*)&VBR.TotalSectors, sizeof(VBR.TotalSectors));
-    drive.seekg(48, ios::beg);
-    drive.read((char*)&VBR.MFTCluster, sizeof(VBR.MFTCluster));
-    drive.seekg(56, ios::beg);
-    drive.read((char*)&VBR.MFTMirrCluster, sizeof(VBR.MFTMirrCluster));
-    uint8_t temp = 0;
-    drive.seekg(64, ios::beg);
-    drive.read((char*)&temp, sizeof(temp));
-    VBR.BytesPerEntry = 2^temp; //chua xu ly
+//Check
+bool EndMFTEntry(BYTE* MFTEntry, int offset) {
+    return getBytes(MFTEntry, offset, 4) == 0xffffffff;
 }
-void readMFTEntry(ifstream &drive, HeaderMFTEntry &HeaderMFTEntry) {
-    streampos MFTEntryStart = drive.tellg();
-    drive.seekg(MFTEntryStart);
-    drive.seekg(0, ios::cur);
-    drive.read((char*)&HeaderMFTEntry.Signature, sizeof(HeaderMFTEntry.Signature));
-    drive.seekg(MFTEntryStart);
-    drive.seekg(20, ios::cur);
-    drive.read((char*)&HeaderMFTEntry.FirstAttrOffset, sizeof(HeaderMFTEntry.FirstAttrOffset));
-    drive.read((char*)&HeaderMFTEntry.Flags, sizeof(HeaderMFTEntry.Flags));
-    drive.read((char*)&HeaderMFTEntry.UsedSize, sizeof(HeaderMFTEntry.UsedSize));
-    drive.read((char*)&HeaderMFTEntry.EntrySize, sizeof(HeaderMFTEntry.EntrySize));
-    drive.seekg(MFTEntryStart);
-    drive.seekg(44, ios::cur);
-    drive.read((char*)&HeaderMFTEntry.ID, sizeof(HeaderMFTEntry.ID));
+bool isMFTEntry(MFTEntry MFTEntry) {
+    return MFTEntry.Header.Signature[0] == 'F' && MFTEntry.Header.Signature[1] == 'I' && MFTEntry.Header.Signature[2] == 'L' && MFTEntry.Header.Signature[3] == 'E';
 }
-// void readMFT(ifstream &drive, MFT &MFT) {
-//     while(drive.tellg() != )
+bool isBitSet(int num, int bitPosition) {
+    // Dịch 1 sang trái để tạo một mặt nạ (mask) với bit tại vị trí cụ thể được đặt
+    int mask = 1 << bitPosition;
+    // Thực hiện phép AND giữa số nguyên và mặt nạ để kiểm tra bit tại vị trí cụ thể
+    // Nếu kết quả khác 0, bit tại vị trí đó được đặt
+    return (num & mask) != 0;
+}
+//Get
+int64_t getBytes(BYTE* sector, int offset, int length) {
+    int64_t result = 0;
+    memcpy(&result, sector+offset, length);
+    return result;
+}
+long long getSizeVolume(VBR VBR) {
+    return VBR.TotalSectors * VBR.BytesPerSector;
+}
+void getTime(const char charTime[8], Time& time) {
+    FILETIME ftTime;
+    memcpy(&ftTime, charTime, sizeof(FILETIME));
+
+    SYSTEMTIME stTime;
+    FileTimeToSystemTime(&ftTime, &stTime);
+    time.Year = stTime.wYear;
+    time.Month = stTime.wMonth;
+    time.Day = stTime.wDay;
+    time.Hour = stTime.wHour;
+    time.Minute = stTime.wMinute;
+    time.Second = stTime.wSecond;
+}
+//Read
+void readVBR(HANDLE hDrive, VBR &VBR) {
+    BYTE Buffer_VBR[512];
+    DWORD bytesRead;
+    if (!ReadFile(hDrive, Buffer_VBR, sizeof(Buffer_VBR), &bytesRead, NULL)) {
+        cerr << "Can't read bootsector" << std::endl;
+        //CloseHandle(hDrive);
+        return;
+    }
+    VBR.BytesPerSector = getBytes(Buffer_VBR, 0x0B, 2);
+    VBR.SectorsPerCluster = getBytes(Buffer_VBR, 0x0D, 1);
+    VBR.SectorsPerTrack = getBytes(Buffer_VBR, 0x18, 2);
+    VBR.NumberOfHeads = getBytes(Buffer_VBR, 0x1A, 2);
+    VBR.TotalSectors = getBytes(Buffer_VBR, 0x28, 8);
+    VBR.MFTCluster = getBytes(Buffer_VBR, 0x30, 4);
+    VBR.MFTMirrCluster = getBytes(Buffer_VBR, 0x38, 4);
+    int8_t temp = getBytes(Buffer_VBR, 0x40, 1);
+    int32_t exponent = (~temp + 1);
+    VBR.BytesPerEntry = pow(2, exponent);
+}
+void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry) {
+    HeaderMFTEntry.Signature[0] = MFTEntry[0];
+    HeaderMFTEntry.Signature[1] = MFTEntry[1];
+    HeaderMFTEntry.Signature[2] = MFTEntry[2];
+    HeaderMFTEntry.Signature[3] = MFTEntry[3];
+    HeaderMFTEntry.FirstAttrOffset = getBytes(MFTEntry, 0x14, 2);
+    HeaderMFTEntry.Flags = getBytes(MFTEntry, 0x16, 2);
+    HeaderMFTEntry.UsedSize = getBytes(MFTEntry, 0x18, 4);
+    HeaderMFTEntry.EntrySize = getBytes(MFTEntry, 0x1C, 4);
+    HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);  
+}
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry HeaderMFTEntry, Content &content, int ContentAttributeOffset) {
+    //StandardContent
+    if(content.Type == 0x10) {
+        StandardContent* standardContent = new StandardContent;
+        memcpy(standardContent->CreationTime, MFTEntry + ContentAttributeOffset, 8);
+        memcpy(standardContent->ModificationTime, MFTEntry + ContentAttributeOffset + 0x08, 8);
+        content = *standardContent;
+        getTime(standardContent->CreationTime, listFile.);
+    }
+    //FileNameContent
+    else if(content.Type == 0x30) {
+        FileNameContent* fileNameContent = new FileNameContent;
+        fileNameContent->ParentDirectory = getBytes(MFTEntry, ContentAttributeOffset, 6);
+        fileNameContent->Attribute = getBytes(MFTEntry, ContentAttributeOffset + 0x38, 4);
+        fileNameContent->NameLength = MFTEntry[ContentAttributeOffset + 0x40];
+        fileNameContent->Name = string((char*)(MFTEntry + ContentAttributeOffset + 0x42), fileNameContent->NameLength*2); //UTF-16 mỗi ký tự có 2 bytes
+        content = *fileNameContent;
+        if((isBitSet(fileNameContent->Attribute, 5) || isBitSet(fileNameContent->Attribute, 28)) && HeaderMFTEntry.ID >=37 )
+            listFile.push_back(make_pair(HeaderMFTEntry.ID, static_cast<int>(fileNameContent->ParentDirectory)));  
+        //cout << fileNameContent->Name << endl;
+    }
+    else if(content.Type == 0x80) {
+        //cout << "Data" << endl;
+    }
+}
+void readAttribute(BYTE* MFTEntry,HeaderMFTEntry HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset) {
+    //Header
+    attribute.Type = getBytes(MFTEntry, HeaderAttributeOffset, 4);
+    attribute.Length = getBytes(MFTEntry, HeaderAttributeOffset + 0x04, 4);
+    attribute.NonResFlag = MFTEntry[HeaderAttributeOffset + 0x08];
+    //Content
+    Content* content = new Content;
+    content->Type = attribute.Type;
+    int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
+    readAttributeContent(MFTEntry, HeaderMFTEntry, *content, ContentAttributeOffset);
+    attribute.Content = content;
+}
+void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry) {
+    readHeaderMFTEntry(Buffer_MFTEntry, MFTEntry.Header);
+    int HeaderAttributeOffset = MFTEntry.Header.FirstAttrOffset;
+    int nAttribute = 0;
+    File file;
+    file.ID = MFTEntry.Header.ID;
+    file.TotalSize = MFTEntry.Header.UsedSize; 
+    while(!EndMFTEntry(Buffer_MFTEntry, HeaderAttributeOffset)){
+        readAttribute(Buffer_MFTEntry, MFTEntry.Header, MFTEntry.ListAttribute[nAttribute], HeaderAttributeOffset, file);
+        HeaderAttributeOffset += MFTEntry.ListAttribute[nAttribute].Length;
+        nAttribute++;
+    }
+}
+void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR) {
+    // Di chuyển con trỏ vị trí đầu tiền của MFT
+    LARGE_INTEGER liDistanceToMove;
+    liDistanceToMove.QuadPart = VBR.MFTCluster  * VBR.SectorsPerCluster * VBR.BytesPerSector;
+    LARGE_INTEGER liNewFilePointer;
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer!" << endl;
+        //CloseHandle(hDrive);
+        return ;
+    }
+    const int sizePerEntry = VBR.BytesPerEntry;
+    int nMFTEntry = 0;
+    int numMFTEntry = -1;
+    //$MFT
+    BYTE* Buffer_MFTEntry = new BYTE[sizePerEntry]; 
+    DWORD bytesRead;
+    if (!ReadFile(hDrive, Buffer_MFTEntry, sizePerEntry, &bytesRead, NULL)) {
+        cerr << "Can't read MFTEntry " << nMFTEntry << endl;
+        //CloseHandle(hDrive);
+        return;
+    }
+    MFTEntry TempMFTEntry;
+    readMFTEntry(Buffer_MFTEntry, TempMFTEntry);
+    if(nMFTEntry == 0){ //$MFT 
+        int TotalClustersOfMFT = getBytes(Buffer_MFTEntry, 0x141, 1);
+        numMFTEntry =  TotalClustersOfMFT*VBR.BytesPerSector*VBR.SectorsPerCluster / VBR.BytesPerEntry;
+        MFT.listMFTEntry = new MFTEntry[numMFTEntry];
+    }
+
+
+    for(int i = 0;i < numMFTEntry;i++){
+        BYTE* Buffer = new BYTE[sizePerEntry]; 
+        DWORD Read;
+        if (!ReadFile(hDrive, Buffer, sizePerEntry, &Read, NULL)) {
+            cerr << "Can't read MFTEntry " << nMFTEntry << endl;
+            //CloseHandle(hDrive);
+            return;
+        }
+        if(Buffer[0] == 'F' && Buffer[1] == 'I' && Buffer[2] == 'L' && Buffer[3] == 'E')
+            readMFTEntry(Buffer, MFT.listMFTEntry[nMFTEntry++]);
+        liDistanceToMove.QuadPart += VBR.BytesPerEntry ;
+        if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+            cerr << "Failed to set file pointer!" << endl;
+            //CloseHandle(hDrive);
+            return ;
+        }
+    }
+    MFT.nMFTEntry = nMFTEntry;
+}
+//Print
+void printVBR(VBR &VBR) {
+    cout << "VBR: " << endl;
+    cout << " BytesPerSector: " << VBR.BytesPerSector << endl;
+    cout << " SectorsPerCluster: " <<(int) VBR.SectorsPerCluster<< endl;
+    cout << " SectorsPerTrack: " << VBR.SectorsPerTrack << endl;
+    cout << " NumberOfHeads: " << VBR.NumberOfHeads << endl;
+    cout << " TotalSectors: " << VBR.TotalSectors << endl;
+    cout << " MFTCluster: " << VBR.MFTCluster << endl;
+    cout << " MFTMirrCluster: " << VBR.MFTMirrCluster << endl;
+    cout << " BytesPerEntry: " << (int)VBR.BytesPerEntry << endl;
+}
+
+//printFolderandFile
+// void printFolderAndFile(MFT &MFT){
+//     for(int i = 0;i < MFT.nMFTEntry;i++){
+//         for(int j = 0; j < listFile.size();j++){
+//             if(MFT.listMFTEntry[i].Header.ID == listFile[j].first && listFile[j].second == 5){
+//                 cout << "File: " << endl;
+//                 cout << "ID: " << MFT.listMFTEntry[i].Header.ID << endl;
+//                 printFolderAndFile(MFT);
+//             }
+//         }
+//     }
 // }
+void printFolderAndFile(MFT &MFT, int parentFolderID, int level = 0) {
+    for(auto& it : listFile) {
+        if(it.second == parentFolderID) {
+            for(int i = 0; i < level; i++) {
+                cout << "\t";
+            }
+            cout << "ID: " << it.first << endl;
+            printFolderAndFile(MFT, it.first, level + 1);
+        }
+    }
+}
+
