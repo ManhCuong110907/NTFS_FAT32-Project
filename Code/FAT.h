@@ -71,11 +71,11 @@ public:
 
 };
 class Folder : public Item
-{   
+{
 private:
     vector<Item*> items;
 public:
-    
+
     Folder(string name, int size, int startSector, attribute a, Time time, Day day) :Item(name,size,startSector,a,time,day) {}
     void addItem(Item* item);
 };
@@ -110,8 +110,8 @@ public:
     vector<Item*>m;
     vector<int> GetNextCluster(int index);
     vector<uint8_t>ReadCluster(vector<int>v);
-    void ReadItem(Folder*,vector<Entry>entry);
-    
+    void ReadItem(Folder* f, vector<Entry>entry, vector<int>check);
+
 };
 vector<uint8_t> ReadBootSector();
 string uint8ToHex(uint8_t number);
@@ -124,4 +124,4 @@ Time GetTime(int dec);
 Day GetDay(int dec);
 string GetNameItem(map<int, vector<uint8_t>> data,int index);
 string readData(vector<uint8_t>& data);
-vector<Entry> ReadEntry(vector<uint8_t>d,int check);
+vector<Entry> ReadEntry(vector<uint8_t>d,vector<int>check);

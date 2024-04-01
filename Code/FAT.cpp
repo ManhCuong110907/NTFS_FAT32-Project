@@ -123,24 +123,23 @@ string GetName(int id, int size, vector<uint8_t>data)
 }
 string GetNameItem(map<int, vector<uint8_t>> data,int index)
 {
-    string temp="";
+    string temp = "";
     if (index != 0 && uint8ToHex(data[index - 1][0x0B]) == "0f")
     {
-        while (uint8ToHex(data[index - 1][0x0B]) == "0f")
-        {
-            index--;
-        }
+        index--;
         while (uint8ToHex(data[index][0x0B]) == "0f")
         {
             temp += GetName(0x01, 10, data[index]) + GetName(0x0E, 12, data[index]) + GetName(0x1C, 4, data[index]) + " ";
-            index++;
+            index--;
         }
     }
     else
         temp += GetName(0x00, 8, data[index]) + GetName(0x08, 3, data[index]);
+    temp.erase(remove(temp.begin(), temp.end(), ' '), temp.end());
     return temp;
-        
+
 }
+
 int GetDec(int id, int size,vector<uint8_t>data)
 {
     string tmp;
@@ -224,8 +223,6 @@ void FAT::ReadFAT(int index, int size)
         k++;
     }
     cout << endl;
-    for (auto x : Cluster)
-        cout << x.first << ":" << x.second << endl;
 }
 vector<int> Program::GetNextCluster(int index)
 {
@@ -239,12 +236,11 @@ vector<int> Program::GetNextCluster(int index)
     }
     return v;
 }
-vector<Entry> ReadEntry(vector<uint8_t>d,int check)
+vector<Entry> ReadEntry(vector<uint8_t>d,vector<int> check)
 {
     vector<Entry>entry;
     map<int, vector<uint8_t>> data;
     string ck = "00";
-    cout << endl << "RDET:" << endl;
     int cnt = 0;
     for (int i = 0;; i += 32)
     {
@@ -272,7 +268,13 @@ vector<Entry> ReadEntry(vector<uint8_t>d,int check)
             e.d = GetDay(GetDec(0x10, 2, pair.second));
             e.size = GetDec(0x1C, 4, pair.second);
             e.name = GetNameItem(data, pair.first);
-            if(e.BeginCluster!=0 &&e.BeginCluster!=check)
+            int ck = 0;
+            for (auto x : check)
+            {
+                if (e.BeginCluster == x)
+                    ck += 1;
+            }
+            if(e.BeginCluster!=0 && ck==0)
                 entry.push_back(e);
         }
     }
@@ -287,7 +289,7 @@ void RDET::Readdata(int offset)
     if (hDrive == INVALID_HANDLE_VALUE) {
         cout << "Can't open disk" << std::endl;
     }
-    vector<uint8_t> temp(512);
+    vector<uint8_t> temp(1024);
     DWORD bytesRead;
     uint64_t sectorOffset = offset;
     // Seek to the beginning of the sector
@@ -297,13 +299,14 @@ void RDET::Readdata(int offset)
         cerr << "Failed to seek to sector" << endl;
         exit(1);
     }
-    if (!ReadFile(hDrive, temp.data(), 512, &bytesRead, NULL)) {
+    if (!ReadFile(hDrive, temp.data(),1024, &bytesRead, NULL)) {
         std::cerr << "Can't read bootsector" << std::endl;
         CloseHandle(hDrive);
     }
     CloseHandle(hDrive);
     data = temp;
-    subEntry = ReadEntry(data,0);
+    vector<int>v;
+    subEntry = ReadEntry(data,v);
 }
 vector<uint8_t>Program::ReadCluster(vector<int>v)
 {
@@ -336,7 +339,7 @@ vector<uint8_t>Program::ReadCluster(vector<int>v)
     }
     return result;
 }
-void Program::ReadItem(Folder* f,vector<Entry>entry)
+void Program::ReadItem(Folder* f,vector<Entry>entry,vector<int>check)
 {
     for (auto e : entry)
     {
@@ -344,22 +347,24 @@ void Program::ReadItem(Folder* f,vector<Entry>entry)
         {
             vector<int>v;
             v = GetNextCluster(e.BeginCluster);
+            check.insert(check.end(), v.begin(), v.end());
             if (e.a.directory == 1)
             {
-                cout << endl << v[0]<<endl;
                 vector<uint8_t>cc = ReadCluster(v);
-                vector<Entry>sdet = ReadEntry(cc,e.BeginCluster);
+                vector<Entry>sdet = ReadEntry(cc,check);
+                cout << endl << e.name << ":" << e.BeginCluster << endl;
                 Folder* folder = new  Folder(e.name,e.size,e.BeginCluster,e.a,e.t,e.d);
                 if (f == NULL)
                     m.push_back(folder);
                 else
                     f->addItem(folder);
-                ReadItem(folder, sdet);
+                ReadItem(folder, sdet,check);
             }
             if (e.a.archive == 1)
             {
                 vector<uint8_t>cc = ReadCluster(v);
                 string s = readData(cc);
+                cout << endl << e.name << ":" << e.BeginCluster << endl;
                 File* file = new File(e.name,e.size,e.BeginCluster,e.a,e.t,e.d,s);
                 if (f == NULL)
                     m.push_back(file);
