@@ -36,6 +36,64 @@ void getTime(const char CreationTime[8], Time& time) {
     time.Minute = stCreationTime.wMinute;
     time.Second = stCreationTime.wSecond;
 }
+string getFileName(MFT &MFT, int ID) {
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            return MFT.listMFTEntry[i].Header.Filename;
+        }
+    }
+    return "";
+}
+string getFileAttribute(MFT &MFT, int ID) {
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            if(MFT.listMFTEntry[i].Header.FileAttribute == 0)
+                return "File";
+            else if(MFT.listMFTEntry[i].Header.FileAttribute == 1)
+                return "Folder";
+        }
+    }
+    return "";
+}
+string getCreationTime(MFT &MFT, int ID) {
+    string s="";
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            Time time;
+            time = MFT.listMFTEntry[i].Header.CreationTime;
+            stringstream ss;
+            ss << setw(2) << setfill('0') << time.Hour << ":"
+               << setw(2) << setfill('0') << time.Minute << ":"
+               << setw(2) << setfill('0') << time.Second << "    "
+               << setw(2) << setfill('0') << time.Day << "/"
+               << setw(2) << setfill('0') << time.Month << "/"
+               << setw(4) << setfill('0') << time.Year;
+
+            s = ss.str();
+        }
+    }
+    return s;
+}
+double getSize(MFT &MFT, int ID){
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        if(MFT.listMFTEntry[i].Header.ID == ID) {
+            return MFT.listMFTEntry[i].Header.UsedSize;
+        }
+    }
+    return 0;
+}
+void getlistFile(MFT &MFT, vector<File> &listFile){
+    for(int i = 0; i < MFT.nMFTEntry; i++) {
+        File file;
+        file.ID = MFT.listMFTEntry[i].Header.ID;
+        file.parentID = MFT.listMFTEntry[i].Header.ParentID;
+        file.Name = MFT.listMFTEntry[i].Header.Filename;
+        file.Attribute = getFileAttribute(MFT, MFT.listMFTEntry[i].Header.ID);
+        file.CreationTime = getCreationTime(MFT, MFT.listMFTEntry[i].Header.ID);
+        file.Size = getSize(MFT, MFT.listMFTEntry[i].Header.ID);
+        listFile.push_back(file);
+    }
+}
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR) {
     BYTE Buffer_VBR[512];
@@ -92,7 +150,6 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Conten
                 HeaderMFTEntry.FileAttribute = 1; //Folder
             else if(isBitSet(fileNameContent->Attribute, 5))
                 HeaderMFTEntry.FileAttribute = 0;  //File
-            listFile.push_back(make_pair(HeaderMFTEntry.ID, fileNameContent->ParentDirectory));
         }
              
         //cout << fileNameContent->Name << endl;
@@ -184,54 +241,15 @@ void printVBR(VBR &VBR) {
     cout << " MFTMirrCluster: " << VBR.MFTMirrCluster << endl;
     cout << " BytesPerEntry: " << (int)VBR.BytesPerEntry << endl;
 }
-string getFileName(MFT &MFT, int ID) {
-    for(int i = 0; i < MFT.nMFTEntry; i++) {
-        if(MFT.listMFTEntry[i].Header.ID == ID) {
-            return MFT.listMFTEntry[i].Header.Filename;
+void printFolderAndFile(vector<File> listFile, int parentFolderID, int level = 0) {
+    for(auto& it : listFile) {
+        if(it.parentID == parentFolderID) {
+            for(int i = 0; i < level; i++) {
+                cout << "\t";
+            }
+            cout <<it.Name << " " << it.Attribute << " " << it.CreationTime << " " << it.Size << endl;
+            printFolderAndFile(listFile, it.ID, level + 1);
         }
     }
-    return "";
-}
-string getFileAttribute(MFT &MFT, int ID) {
-    for(int i = 0; i < MFT.nMFTEntry; i++) {
-        if(MFT.listMFTEntry[i].Header.ID == ID) {
-            if(MFT.listMFTEntry[i].Header.FileAttribute == 0)
-                return "File";
-            else if(MFT.listMFTEntry[i].Header.FileAttribute == 1)
-                return "Folder";
-        }
-    }
-    return "";
-}
-string getCreationTime(MFT &MFT, int ID) {
-    string s="";
-    for(int i = 0; i < MFT.nMFTEntry; i++) {
-        if(MFT.listMFTEntry[i].Header.ID == ID) {
-            Time time;
-            time = MFT.listMFTEntry[i].Header.CreationTime;
-            s =to_string(time.Hour) + ":" + to_string(time.Minute) + ":" + to_string(time.Second)+ " "+to_string(time.Day) + "/" + to_string(time.Month) + "/" + to_string(time.Year);
-        }
-    }
-    return s;
-}
-double getSize(MFT &MFT, int ID){
-    for(int i = 0; i < MFT.nMFTEntry; i++) {
-        if(MFT.listMFTEntry[i].Header.ID == ID) {
-            return MFT.listMFTEntry[i].Header.UsedSize;
-        }
-    }
-    return 0;
-}
-void printFolderAndFile(MFT &MFT, int parentFolderID, int level = 0) {
-    cout << listFile.size();
-    // for(auto& it : listFile) {
-    //     if(it.second == parentFolderID) {
-    //         for(int i = 0; i < level; i++) {
-    //             cout << "\t";
-    //         }
-    //         cout <<getFileName(MFT, it.first)  <<" - ID: " << it.first << " -Type: "<< getFileAttribute(MFT, it.first)<<" -Time: "<< getCreationTime(MFT, it.first)<< endl;
-    //         printFolderAndFile(MFT, it.first, level + 1);
-    //     }
-    // }
 }
 

@@ -17,15 +17,13 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    Ui::MainWindow *ui;
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void addRoot(QTreeWidgetItem *&root, QString filename, QString type, QString time, QString size);
-    void addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size);
-    void displayFile(MFT &MFT, int parentFolderID, QTreeWidgetItem *parentItem);
+    QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
+    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size);
+    void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);
     void displayTreeLabels();
-
-private:
-    Ui::MainWindow *ui;
 
 };
 #endif // MAINWINDOW_H

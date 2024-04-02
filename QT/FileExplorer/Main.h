@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <Windows.h>
 using namespace std;
 #endif

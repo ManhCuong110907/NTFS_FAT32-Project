@@ -2,10 +2,10 @@
 #define NTFS_H
 #include  "Main.h"
 #include <string>
-extern vector<pair<int,int>> listFile;
+#include <sstream>
 #pragma pack(push, 1)
 struct Time{
-    uint16_t Year;
+    uint16_t Year;             
     uint16_t Month;
     uint16_t Day;
     uint16_t Hour;
@@ -65,6 +65,14 @@ struct MFT{
     int nMFTEntry;
     MFTEntry* listMFTEntry;
 };
+struct File{
+    int ID;
+    int parentID;
+    string Name;
+    string Attribute;
+    string CreationTime;
+    double Size;
+};
 #pragma pack(pop)
 //Get
 int getSizePerEntry(VBR VBR);
@@ -74,6 +82,7 @@ string getFileName(MFT &MFT, int ID);
 string getFileAttribute(MFT &MFT, int ID);
 string getCreationTime(MFT &MFT, int ID);
 double getSize(MFT &MFT, int ID);
+void getlistFile(MFT &MFT, vector<File> &listFile);
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR);
 void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry);
@@ -85,8 +94,7 @@ void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR);
 //Print
 void printVBR(VBR &VBR);
 void printHeaderMFTEntry(HeaderMFTEntry &HeaderMFTEntry);
-
-void printFolderAndFile(MFT &MFT, int parentFolderID, int level);
+void printFolderAndFile(vector<File> listFile, int parentFolderID, int level);
 
 
 #endif

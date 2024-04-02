@@ -1,8 +1,8 @@
 #include"Main.h"
 #include "mainwindow.h"
 #include "NTFS.h"
+#include "ui_mainwindow.h"
 #include <QApplication>
-vector<pair<int,int>> listFile={};
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -17,13 +17,16 @@ int main(int argc, char *argv[])
     }
     VBR VBR;
     readVBR(hDrive, VBR);
-    //printVBR(VBR);
+    printVBR(VBR);
     MFT MFT;
     readMFT(hDrive, MFT, VBR);
-    printFolderAndFile(MFT, 5, 0);
+    vector<File> listFile;
+    getlistFile(MFT, listFile);
+    printFolderAndFile(listFile, 5, 0);
     CloseHandle(hDrive); // Đóng handle của ổ đĩa
     w.displayTreeLabels();
-    w.displayFile(MFT, 5, NULL);
+    QTreeWidgetItem *root = w.addRoot("NTFS","Partition", "","");
+    w.displayFile(listFile, 5, root);
     w.show();
     return a.exec();
 }
