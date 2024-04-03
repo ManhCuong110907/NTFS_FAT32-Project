@@ -35,6 +35,7 @@ struct HeaderMFTEntry{
     int FileAttribute;
     string Filename;
     float dataSize;
+    string data="";
 };
 class Content{
 public:
@@ -73,6 +74,7 @@ struct File{
     string Attribute;
     string CreationTime;
     double Size;
+    string Data;
 };
 #pragma pack(pop)
 //Get
