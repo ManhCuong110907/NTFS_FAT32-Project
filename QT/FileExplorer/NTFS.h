@@ -34,6 +34,7 @@ struct HeaderMFTEntry{
     Time CreationTime;
     int FileAttribute;
     string Filename;
+    float dataSize;
 };
 class Content{
 public:
@@ -83,11 +84,12 @@ string getFileAttribute(MFT &MFT, int ID);
 string getCreationTime(MFT &MFT, int ID);
 double getSize(MFT &MFT, int ID);
 void getlistFile(MFT &MFT, vector<File> &listFile);
+void updateSize(vector<File> &listFile, int parentID);
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR);
 void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry);
 void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry);
-void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Content &content, int ContentAttributeOffset);
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content);
 void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset);
 void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR);
 

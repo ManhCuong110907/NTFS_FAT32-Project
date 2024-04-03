@@ -77,10 +77,31 @@ string getCreationTime(MFT &MFT, int ID) {
 double getSize(MFT &MFT, int ID){
     for(int i = 0; i < MFT.nMFTEntry; i++) {
         if(MFT.listMFTEntry[i].Header.ID == ID) {
-            return MFT.listMFTEntry[i].Header.UsedSize;
+            return MFT.listMFTEntry[i].Header.dataSize;
         }
     }
     return 0;
+}
+void updateSize(vector<File> &listFile, int parentID) {
+    double size = 0;
+    for (auto &file : listFile) {
+        if (file.parentID == parentID) {
+            if (file.Attribute == "File") {
+                size += file.Size;
+            } else if (file.Attribute == "Folder") {
+                updateSize(listFile, file.ID); // Gọi đệ quy cho các thư mục con
+                size += file.Size; // Sau khi cập nhật kích thước của các thư mục con, cộng vào kích thước của thư mục cha
+            }
+        }
+    }
+
+    // Cập nhật kích thước cho thư mục
+    for (auto &file : listFile) {
+        if (file.ID == parentID && file.Attribute == "Folder") {
+            file.Size = size;
+            break;
+        }
+    }
 }
 void getlistFile(MFT &MFT, vector<File> &listFile){
     for(int i = 0; i < MFT.nMFTEntry; i++) {
@@ -125,9 +146,10 @@ void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry) {
     HeaderMFTEntry.EntrySize = getBytes(MFTEntry, 0x1C, 4);
     HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);  
 }
-void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Content &content, int ContentAttributeOffset) {
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content) {
     //StandardContent
     if(content.Type == 0x10) {
+        int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
         StandardContent* standardContent = new StandardContent;
         memcpy(standardContent->CreationTime, MFTEntry + ContentAttributeOffset, 8);
         memcpy(standardContent->ModificationTime, MFTEntry + ContentAttributeOffset + 0x08, 8);
@@ -136,6 +158,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Conten
     }
     //FileNameContent
     else if(content.Type == 0x30) {
+        int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
         FileNameContent* fileNameContent = new FileNameContent;
         fileNameContent->ParentDirectory = getBytes(MFTEntry, ContentAttributeOffset, 6);
         fileNameContent->Attribute = getBytes(MFTEntry, ContentAttributeOffset + 0x38, 4);
@@ -155,19 +178,44 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry, Conten
         //cout << fileNameContent->Name << endl;
     }
     else if(content.Type == 0x80) {
-        //cout << "Data" << endl;
+        // if(attribute.NonResFlag == 0){
+        //     int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
+        //     string data(reinterpret_cast<char*>(MFTEntry + ContentAttributeOffset), HeaderMFTEntry.dataSize);
+        // }
+        // if(attribute.NonResFlag == 1){
+        //     uint16_t datarunOffset = getBytes(MFTEntry, HeaderAttributeOffset + 0x20, 2);
+        //     int ContentAttributeOffset = HeaderAttributeOffset + datarunOffset;
+        //     int hexSize =  getBytes(MFTEntry, ContentAttributeOffset, 1);
+        //     int BytesForClusterCount = hexSize >> 4;
+        //     int BytesForFirstCluster = hexSize & 0x0F;
+        //     //cout << BytesForClusterCount << " " << BytesForFirstCluster << endl;
+        //     int clusterCount = getBytes(MFTEntry, ContentAttributeOffset + 0x1, BytesForClusterCount);
+        //     int FirstCluster = getBytes(MFTEntry, ContentAttributeOffset + 0x1 + BytesForClusterCount, BytesForFirstCluster);
+
+            
+
+        // }
     }
 }
 void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset) {
     //Header
     attribute.Type = getBytes(MFTEntry, HeaderAttributeOffset, 4);
     attribute.Length = getBytes(MFTEntry, HeaderAttributeOffset + 0x04, 4);
-    attribute.NonResFlag = MFTEntry[HeaderAttributeOffset + 0x08];
+    if(getBytes(MFTEntry, HeaderAttributeOffset + 0x08, 1) == 0x01)
+        attribute.NonResFlag = 1;
+    else attribute.NonResFlag = 0;
+    //FileSize
+    if(attribute.Type == 0x80){
+        if(attribute.NonResFlag == 0)
+            HeaderMFTEntry.dataSize = getBytes(MFTEntry, HeaderAttributeOffset + 0x10, 4);
+        if(attribute.NonResFlag == 1)
+            HeaderMFTEntry.dataSize = getBytes(MFTEntry, HeaderAttributeOffset + 0x30, 8);
+    }
+        
     //Content
     Content* content = new Content;
     content->Type = attribute.Type;
-    int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
-    readAttributeContent(MFTEntry, HeaderMFTEntry, *content, ContentAttributeOffset);
+    readAttributeContent(MFTEntry, HeaderMFTEntry, attribute, HeaderAttributeOffset, *content);
     attribute.Content = content;
 }
 void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry) {
