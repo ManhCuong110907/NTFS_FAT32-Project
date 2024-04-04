@@ -75,6 +75,7 @@ struct File{
     string CreationTime;
     double Size;
     string Data;
+    int isUsing = 0;
 };
 #pragma pack(pop)
 //Get

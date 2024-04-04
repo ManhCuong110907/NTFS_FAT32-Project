@@ -22,7 +22,7 @@ void MainWindow::displayTreeLabels(){
 QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString time, QString size){
     QTreeWidgetItem *root = new QTreeWidgetItem(ui->treeWidget);
     root->setText(0, filename);
-    root->setIcon(0,QIcon("E:/imgDisk2.png"));
+    root->setIcon(0,QIcon("D:/imgDisk2.png"));
     root->setText(1, type);
     root->setText(2, time);
     root->setText(3, size);
@@ -34,9 +34,9 @@ QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename,
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
     if(isFolder==1)
-        child->setIcon(0,QIcon("E:/imgFolder.png"));
+        child->setIcon(0,QIcon("D:/imgFolder.png"));
     else
-        child->setIcon(0,QIcon("E:/imgFile.png"));
+        child->setIcon(0,QIcon("D:/imgFile.png"));
     child->setText(1, type);
     child->setText(2, time);
     child->setText(3, size);
@@ -48,7 +48,7 @@ void MainWindow::displayFile(vector<File> listFile, int parentFolderID, QTreeWid
 {
     for(const auto &file : listFile)
     {
-        if(file.parentID == parentFolderID){
+        if(file.parentID == parentFolderID && (file.isUsing == 1 || file.isUsing == 3)){
             QString name = QString::fromStdString(file.Name);
             QString attribute = QString::fromStdString(file.Attribute);
             QString creationTime = QString::fromStdString(file.CreationTime);
@@ -97,6 +97,20 @@ void MainWindow::displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem
     }
 }
 
+void MainWindow::displayFileContent(QString filename)
+{
+    for(auto file : this->WinListFile)
+    {
+        if(filename == QString::fromStdString(file.Name))
+            ui->textBrowser->setText(QString::fromStdString(file.Data));
+    }
+}
 
 
+void MainWindow::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    // Lấy tên của item được double-clicked
+    QString itemName = item->text(0); // Giả sử tên tệp được lưu trong cột đầu tiên (có chỉ số là 0)
+    displayFileContent(itemName);
+}
 

@@ -18,6 +18,7 @@ class MainWindow : public QMainWindow
 
 public:
     Ui::MainWindow *ui;
+    vector<File> WinListFile;
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
@@ -25,6 +26,9 @@ public:
     void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);
     void displayTreeLabels();
     void displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem);
+    void displayFileContent(QString filename);
 
+private slots:
+    void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
 };
 #endif // MAINWINDOW_H
