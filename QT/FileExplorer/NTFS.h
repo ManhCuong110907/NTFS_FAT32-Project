@@ -100,7 +100,8 @@ void printVBR(VBR &VBR);
 void printHeaderMFTEntry(HeaderMFTEntry &HeaderMFTEntry);
 void printFolderAndFile(vector<File> listFile, int parentFolderID, int level);
 
-
+//Delete
+void deleteFile(MFT &MFT);
 #endif
 
 

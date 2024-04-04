@@ -29,12 +29,42 @@ void getTime(const char CreationTime[8], Time& time) {
     SYSTEMTIME stCreationTime;
     FileTimeToSystemTime(&ftCreationTime, &stCreationTime);
 
-    time.Year = stCreationTime.wYear;
-    time.Month = stCreationTime.wMonth;
-    time.Day = stCreationTime.wDay;
-    time.Hour = stCreationTime.wHour;
-    time.Minute = stCreationTime.wMinute;
     time.Second = stCreationTime.wSecond;
+    time.Minute = stCreationTime.wMinute;
+    time.Hour = stCreationTime.wHour + 7;
+    time.Day = stCreationTime.wDay;
+    time.Month = stCreationTime.wMonth;
+    time.Year = stCreationTime.wYear;
+    if(time.Hour >= 24){
+        time.Hour -= 24;
+        time.Day++;
+    }
+    if(time.Month == 2 ){
+        if(time.Year % 4 == 0 && time.Year % 100 != 0 || time.Year % 400 == 0){
+            if(time.Day > 29){
+                time.Day = 1;
+                time.Month++;
+            }
+        }
+        else if(time.Day > 28){
+            time.Day = 1;
+            time.Month++;
+        }
+    }
+    if((time.Month == 4 || time.Month == 6 || time.Month == 9 || time.Month == 11) && time.Day > 30){
+        time.Day = 1;
+        time.Month++;
+    }
+    if(time.Month == 1 || time.Month == 3 || time.Month == 5 || time.Month == 7 || time.Month == 8 || time.Month == 10 || time.Month == 12){
+        if(time.Day > 31){
+            time.Day = 1;
+            time.Month++;
+        }
+    }
+    if(time.Month > 12){
+        time.Month = 1;
+        time.Year++;
+    }
 }
 string getFileName(MFT &MFT, int ID) {
     for(int i = 0; i < MFT.nMFTEntry; i++) {

@@ -5,7 +5,7 @@
 #include <QTreeWidgetItem>
 #include <QDebug>
 #include "NTFS.h"
-
+#include"FAT.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -21,9 +21,10 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
-    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size);
+    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size,bool isFolder);
     void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);
     void displayTreeLabels();
+    void displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem);
 
 };
 #endif // MAINWINDOW_H

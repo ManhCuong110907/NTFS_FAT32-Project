@@ -1,4 +1,4 @@
-﻿#include"Header.h"
+﻿#include"FAT.h"
 string readData(vector<uint8_t>& data) {
     string result = "";
     int tmp = 0;
@@ -25,19 +25,19 @@ string uint8ToHex(uint8_t number) {
 }
 int binaryToDecimal(string binary) {
     int decimal = 0;
-    int power = 0;
+    int p = 0;
     for (int i = binary.length() - 1; i >= 0; --i) {
         if (binary[i] == '1') {
-            decimal += pow(2, power);
+            decimal += power(2, p);
         }
-        ++power;
+        ++p;
     }
 
     return decimal;
 }
-Time GetTime(int dec)
+TimeF GetTime(int dec)
 {
-    Time t;
+    TimeF t;
     string binary = "";
     while (dec > 0) {
         binary = std::to_string(dec % 2) + binary;
@@ -70,6 +70,13 @@ Day GetDay(int dec)
     d.day = binaryToDecimal(s.substr(11,5));
     return d;
 }
+long power(int base, int exponent) {
+    long result = 1;
+    for (int i = 0; i < exponent; ++i) {
+        result *= base;
+    }
+    return result;
+}
 int HextoDec(string s)
 {
     int k = 0;
@@ -77,9 +84,9 @@ int HextoDec(string s)
     for (int i = s.size() - 1; i >= 0; i--)
     {
         if (s[i] <= 57)
-            result += (s[i] - 48) * pow(16, k++);
+            result += (s[i] - 48) * power(16, k++);
         else
-            result += (s[i] - 87) * pow(16, k++);
+            result += (s[i] - 87) * power(16, k++);
     }
     return result;
 }
@@ -135,9 +142,13 @@ string GetNameItem(map<int, vector<uint8_t>> data,int index)
     }
     else
         temp += GetName(0x00, 8, data[index]) + GetName(0x08, 3, data[index]);
-    temp.erase(remove(temp.begin(), temp.end(), ' '), temp.end());
-    return temp;
-
+    stringstream ss;
+    for (char c : temp) {
+        if (!std::isspace(c)) {
+            ss << c;
+        }
+    }
+    return ss.str();
 }
 
 int GetDec(int id, int size,vector<uint8_t>data)
@@ -147,9 +158,9 @@ int GetDec(int id, int size,vector<uint8_t>data)
         tmp += uint8ToHex(data[i]);
     return HextoDec(tmp);
 }
-vector<uint8_t> ReadBootSector()
+void BootSector::ReadBootSector()
 {
-    const char* drive = "\\\\.\\F:";
+    const char* drive = "\\\\.\\D:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -162,7 +173,15 @@ vector<uint8_t> ReadBootSector()
         CloseHandle(hDrive);
     }
     CloseHandle(hDrive);
-    return temp;
+    data = temp;
+    Size_Sector = GetDec(0x0B, 2, data);
+    NumberSector_Clusters = GetDec(0x0D, 1, data);
+    NumberSector_BFAT = GetDec(0x0E, 2, data);
+    Number_FAT = GetDec(0x10, 1, data);
+    Size_Volumes = GetDec(0x20, 4, data);
+    NumberSector_FAT = GetDec(0x24, 4, data);
+    BeginCluster_RDET = GetDec(0x2C, 4, data);
+    Type_FAT = GetName(0x52, 8, data);
 }
 void BootSector::updateData(vector<uint8_t> data)
 {
@@ -189,7 +208,7 @@ void BootSector::updateInf()
 }
 void FAT::ReadFAT(int index, int size)
 {
-    const char* drive = "\\\\.\\F:";
+    const char* drive = "\\\\.\\D:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -289,7 +308,8 @@ void RDET::Readdata(int offset)
     if (hDrive == INVALID_HANDLE_VALUE) {
         cout << "Can't open disk" << std::endl;
     }
-    vector<uint8_t> temp(1024);
+    vector<uint8_t> temp;
+    vector<uint8_t>tmp(512);
     DWORD bytesRead;
     uint64_t sectorOffset = offset;
     // Seek to the beginning of the sector
@@ -299,18 +319,27 @@ void RDET::Readdata(int offset)
         cerr << "Failed to seek to sector" << endl;
         exit(1);
     }
-    if (!ReadFile(hDrive, temp.data(),1024, &bytesRead, NULL)) {
+    if (!ReadFile(hDrive, tmp.data(), 512, &bytesRead, NULL)) {
         std::cerr << "Can't read bootsector" << std::endl;
         CloseHandle(hDrive);
+    }
+    temp.insert(temp.end(), tmp.begin(), tmp.end());
+    while (temp[temp.size() - 32] != 0x00)
+    {
+        if (!ReadFile(hDrive, tmp.data(), 512, &bytesRead, NULL)) {
+            std::cerr << "Can't read bootsector" << std::endl;
+            CloseHandle(hDrive);
+        }
+        temp.insert(temp.end(), tmp.begin(), tmp.end());
     }
     CloseHandle(hDrive);
     data = temp;
     vector<int>v;
-    subEntry = ReadEntry(data,v);
+    subEntry = ReadEntry(data, v);
 }
 vector<uint8_t>Program::ReadCluster(vector<int>v)
 {
-    const char* drive = "\\\\.\\F:";
+    const char* drive = "\\\\.\\D:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -365,7 +394,7 @@ void Program::ReadItem(Folder* f,vector<Entry>entry,vector<int>check)
                 vector<uint8_t>cc = ReadCluster(v);
                 string s = readData(cc);
                 cout << endl << e.name << ":" << e.BeginCluster << endl;
-                File* file = new File(e.name,e.size,e.BeginCluster,e.a,e.t,e.d,s);
+                FileF* file = new FileF(e.name,e.size,e.BeginCluster,e.a,e.t,e.d,s);
                 if (f == NULL)
                     m.push_back(file);
                 else
@@ -374,9 +403,99 @@ void Program::ReadItem(Folder* f,vector<Entry>entry,vector<int>check)
 
         }
    }
+
+}
+void Program::updateFoldersize()
+{
+    for (auto x : m)
+    {
+        if (dynamic_cast<Folder*>(x))
+        {
+            Folder* f = dynamic_cast<Folder*>(x);
+            x->size = f->getsize();
+        }
+    }
+}
+int Folder::getsize()
+{
+    for (auto x : items)
+    {
+
+        if (dynamic_cast<Folder*>(x))
+        {
+            Folder* f = dynamic_cast<Folder*>(x);
+            this->size += f->getsize();
+        }
+        else
+            this->size += x->size;
+    }
+    return this->size;
 }
 void Folder::addItem(Item* item)
 {
     items.push_back(item);
+}
+string DaytoString(Day d)
+{
+    stringstream ss;
+    ss << setw(2) << setfill('0')  << to_string(d.day);
+    ss << "/";
+    // Set width and fill character for month
+    ss << setw(2) << setfill('0') << to_string(d.month);
+    ss << "/";
+    // Set width and fill character for year
+    ss << to_string(d.year);
+    return ss.str();
+}
+string TimetoString(TimeF t, string d)
+{
+    stringstream ss;
+    ss<< setw(2) << setfill('0') << to_string(t.hour);
+    ss << ":";
+    ss <<setw(2) << setfill('0')  << to_string(t.minute);
+    ss << ":";
+    ss << setw(2) << setfill('0')  << to_string(t.second);
+    ss <<"   " <<d;
+    return ss.str();
+}
+string  AttributetoString(attribute a)
+{
+    string s;
+    if (a.archive == 1)
+        s += "File";
+    else
+        s += "Folder";
+    return s;
+}
+void displayFAT(Folder* f, vector<Item*>m)
+{
+    if (f == NULL)
+    {
+        for (auto x : m)
+        {
+            if (dynamic_cast<Folder*>(x))
+            {
+                cout <<AttributetoString(x->a)<<" "<< x->name << ":" << x->size << " " << DaytoString(x->day) <<" "<<TimetoString(x->time,DaytoString(x->day)) << endl;
+                displayFAT(dynamic_cast<Folder*>(x), m);
+
+            }
+            else
+                cout << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time,DaytoString(x->day)) << endl;
+        }
+    }
+    else
+    {
+        for (auto x : f->items)
+        {
+            if (dynamic_cast<Folder*>(x))
+            {
+                cout << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time,DaytoString(x->day)) << endl;
+                displayFAT(dynamic_cast<Folder*>(x), m);
+
+            }
+            else
+                cout << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time,DaytoString(x->day)) << endl;
+        }
+    }
 }
 
