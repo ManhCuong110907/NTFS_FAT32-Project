@@ -1,4 +1,5 @@
 #include "NTFS.h"
+#include <bitset>
 //Check
 bool EndMFTEntry(BYTE* MFTEntry, int offset) {
     return getBytes(MFTEntry, offset, 4) == 0xffffffff;
@@ -18,6 +19,50 @@ int64_t getBytes(BYTE* sector, int offset, int length) {
     int64_t result = 0;
     memcpy(&result, sector+offset, length);
     return result;
+}
+int64_t getTwosComplement(int num, int numBits, bool &negative) {
+    if(numBits == 8)
+    {
+        int8_t result = num;
+        if(isBitSet(result, numBits - 1))
+        {
+            result = ~result + 1;
+            negative = true;
+        }   
+        else result = result;
+        return result;
+    }
+    else if(numBits == 16)
+    {
+        int16_t result = num;
+        if(isBitSet(result, numBits - 1))
+        {
+            result = ~result + 1;
+            negative = true;
+        }   
+        else result = result;
+        return result;
+    }
+    else if(numBits == 32)
+    {
+        int32_t result = num;
+        if(isBitSet(result, numBits - 1))
+        {
+            result = ~result + 1;
+            negative = true;
+        }   
+        else result = result;
+        return result;
+    }
+    else if(numBits == 64)
+    {
+        int64_t result = num;
+        if(isBitSet(result, numBits - 1))
+            result = ~result + 1;
+        else result = result;
+        return result;
+    }
+    else return 0;
 }
 long long getSizeVolume(VBR VBR) {
     return VBR.TotalSectors * VBR.BytesPerSector;
@@ -215,6 +260,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
             HeaderMFTEntry.data = data;
         }
         string tmpdata ="";
+         int FirstCluster = 0;
         if(attribute.NonResFlag == 1 && HeaderMFTEntry.ID >= 37){
             uint16_t datarunOffset = getBytes(MFTEntry, HeaderAttributeOffset + 0x20, 2);
             int ContentAttributeOffset = HeaderAttributeOffset + datarunOffset;
@@ -223,10 +269,13 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
                 int BytesForClusterCount = hexSize & 0x0F;
                 int BytesForFirstCluster = hexSize >> 4;
                 int clusterCount = getBytes(MFTEntry, ContentAttributeOffset + 0x1, BytesForClusterCount);
-                int FirstCluster = getBytes(MFTEntry, ContentAttributeOffset + 0x1 + BytesForClusterCount, BytesForFirstCluster);
-
-
-                const char* drive2 = "\\\\.\\E:"; // Đường dẫn đến ổ đĩa D
+                int tmp = getBytes(MFTEntry, ContentAttributeOffset + 0x1 + BytesForClusterCount, BytesForFirstCluster);
+                bool negative = false;
+                int twoComplement = getTwosComplement(tmp, BytesForFirstCluster*8, negative);
+                if(negative == true)
+                    FirstCluster -= twoComplement;
+                else FirstCluster += twoComplement;
+                const char* drive2 = "\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
                 HANDLE hDrive2 = CreateFileA(drive2, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
                 if (hDrive2 == INVALID_HANDLE_VALUE) {
                     std::cerr << "Can't open disk 2" << std::endl;
@@ -236,7 +285,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
                 liDistanceToMove2.QuadPart = FirstCluster * 8 * 512;
                 LARGE_INTEGER liNewFilePointer2;
                 if (!SetFilePointerEx(hDrive2, liDistanceToMove2, &liNewFilePointer2, FILE_BEGIN)) {
-                    cerr << "Failed to set file pointer!" << endl;
+                    cerr << "Failed to set file pointer 2!" << endl;
                     return ;
                 }
                 BYTE* Buffer = new BYTE[clusterCount*8*512]; 

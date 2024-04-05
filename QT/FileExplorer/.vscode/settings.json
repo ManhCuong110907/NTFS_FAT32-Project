@@ -1,6 +1,10 @@
 {
     "files.associations": {
         "utility": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "ostream": "cpp",
+        "codecvt": "cpp",
+        "xlocale": "cpp",
+        "bitset": "cpp"
     }
 }

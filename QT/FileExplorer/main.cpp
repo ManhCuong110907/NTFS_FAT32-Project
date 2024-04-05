@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-    const char* drive = "\\\\.\\E:"; // Đường dẫn đến ổ đĩa D
+    const char* drive = "\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     getlistFile(MFT, listFile);
     updateSize(listFile, 5);
     w.WinListFile = listFile;
-    //printFolderAndFile(listFile, 5, 0);
+    printFolderAndFile(listFile, 5, 0);
     CloseHandle(hDrive);
 
 

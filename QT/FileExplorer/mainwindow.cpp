@@ -22,7 +22,7 @@ void MainWindow::displayTreeLabels(){
 QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString time, QString size){
     QTreeWidgetItem *root = new QTreeWidgetItem(ui->treeWidget);
     root->setText(0, filename);
-    root->setIcon(0,QIcon("D:/imgDisk2.png"));
+    root->setIcon(0,QIcon("E:/imgDisk2.png"));
     root->setText(1, type);
     root->setText(2, time);
     root->setText(3, size);
@@ -34,9 +34,9 @@ QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename,
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
     if(isFolder==1)
-        child->setIcon(0,QIcon("D:/imgFolder.png"));
+        child->setIcon(0,QIcon("E:/imgFolder.png"));
     else
-        child->setIcon(0,QIcon("D:/imgFile.png"));
+        child->setIcon(0,QIcon("E:/imgFile.png"));
     child->setText(1, type);
     child->setText(2, time);
     child->setText(3, size);
