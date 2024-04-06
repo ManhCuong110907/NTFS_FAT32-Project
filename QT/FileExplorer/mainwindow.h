@@ -29,6 +29,8 @@ public:
     void displayFileContent(QString filename);
 
 private slots:
+
+    void showContextMenu(const QPoint &pos);
     void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
 };
 #endif // MAINWINDOW_H

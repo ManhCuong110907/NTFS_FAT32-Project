@@ -6,6 +6,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->treeWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 }
 
 MainWindow::~MainWindow()
@@ -22,7 +24,7 @@ void MainWindow::displayTreeLabels(){
 QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString time, QString size){
     QTreeWidgetItem *root = new QTreeWidgetItem(ui->treeWidget);
     root->setText(0, filename);
-    root->setIcon(0,QIcon("E:/imgDisk2.png"));
+    root->setIcon(0,QIcon("D:/imgDisk2.png"));
     root->setText(1, type);
     root->setText(2, time);
     root->setText(3, size);
@@ -34,9 +36,9 @@ QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename,
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
     if(isFolder==1)
-        child->setIcon(0,QIcon("E:/imgFolder.png"));
+        child->setIcon(0,QIcon("D:/imgFolder.png"));
     else
-        child->setIcon(0,QIcon("E:/imgFile.png"));
+        child->setIcon(0,QIcon("D:/imgFile.png"));
     child->setText(1, type);
     child->setText(2, time);
     child->setText(3, size);
@@ -113,4 +115,55 @@ void MainWindow::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int colu
     QString itemName = item->text(0); // Giả sử tên tệp được lưu trong cột đầu tiên (có chỉ số là 0)
     displayFileContent(itemName);
 }
+void MainWindow::showContextMenu(const QPoint &pos)
+{
+    QTreeWidgetItem *item = ui->treeWidget->itemAt(pos);
+    if (!item)
+        return;
+
+    // Kiểm tra xem mục cha của mục được chọn có tên là "Recycle Bin" hay không
+    QTreeWidgetItem *parentItem = item->parent();
+    if (parentItem && parentItem->text(0) == "Recycle Bin") {
+        // Nếu mục cha có tên là "Recycle Bin", chỉ hiển thị tùy chọn "Restore"
+        QMenu menu;
+        QAction *restoreAction = menu.addAction("Restore");
+
+        QAction *selectedAction = menu.exec(ui->treeWidget->mapToGlobal(pos));
+        if (selectedAction == restoreAction) {
+            qDebug() << "Restore action triggered for:" << item->text(0);
+            // Thêm xử lý khôi phục tệp/thư mục ở đây
+        }
+    } else {
+        // Nếu không phải "Recycle Bin", kiểm tra xem mục có chứa ".txt" không
+        QString itemName = item->text(0);
+        if (itemName.contains(".txt", Qt::CaseInsensitive)) {
+            // Nếu chứa ".txt", hiển thị tất cả các tùy chọn menu
+            QMenu menu;
+            QAction *openAction = menu.addAction("Open");
+            QAction *deleteAction = menu.addAction("Delete");
+
+            QAction *selectedAction = menu.exec(ui->treeWidget->mapToGlobal(pos));
+            if (selectedAction == openAction) {
+                // Gọi hàm xử lý tương tự như khi double-click
+                on_treeWidget_itemDoubleClicked(item, 0); // 0 là chỉ số cột, có thể thay đổi nếu cần
+            }
+            else if (selectedAction == deleteAction) {
+                qDebug() << "Delete action triggered for:" << item->text(0);
+                // Thêm xử lý xóa tệp/thư mục ở đây
+            }
+        } else {
+            // Nếu không chứa ".txt", chỉ hiển thị tùy chọn "Delete"
+            QMenu menu;
+            QAction *deleteAction = menu.addAction("Delete");
+
+            QAction *selectedAction = menu.exec(ui->treeWidget->mapToGlobal(pos));
+            if (selectedAction == deleteAction) {
+                qDebug() << "Delete action triggered for:" << item->text(0);
+                // Thêm xử lý xóa tệp/thư mục ở đây
+            }
+        }
+    }
+}
+
+
 
