@@ -152,3 +152,4 @@ string TimetoString(TimeF t, string d);
 string  AttributetoString(attribute a);
 long power(int base, int exponent);
 void updateListFile(vector<Item*>m, vector<File>& Fi);
+void GetPname(vector<Item*>m,string Pname,string& s,int offset);

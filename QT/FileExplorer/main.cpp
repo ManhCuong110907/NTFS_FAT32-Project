@@ -22,8 +22,9 @@ int main(int argc, char *argv[])
     getlistFile(MFT, listFile);
     updateSize(listFile, 5);
 
-    printFolderAndFile(listFile, 5, 0);
+    //printFolderAndFile(listFile, 5, 0);
     CloseHandle(hDrive);
+
 
 
     BootSector bs;
@@ -37,26 +38,16 @@ int main(int argc, char *argv[])
     p.ReadItem(NULL,rdet.subEntry,v);
     p.updateFoldersize();
     w.updateProgram(p);
-    vector<File> listFile2;
+    vector<File>listFile2;
     updateListFile(p.m,listFile2);
     listFile.insert(listFile.end(),listFile2.begin(),listFile2.end());
     w.WinListFile = listFile;
-    w.displayTreeLabels();
-    QItem it;
-    it.name = "FAT";
-    it.attribute = "Partition";
-    it.creationTime = "";
-    it.size = "";
-    QTreeWidgetItem *root = w.addRoot(it);
-    w.displayFAT(p.m,root);
-    it.name = "NTFS";
-    QTreeWidgetItem *root1 = w.addRoot(it);
-    it.name = "Recycle Bin";
-    QTreeWidgetItem *root2 = w.addRoot(it);
-    root2->setIcon(0,QIcon("D:/RecycleBin.png"));
-    QTreeWidgetItem *item = w.addChild(root2,it,0);
-    w.displayFile(listFile, 5,root1);
-    w.updateProgram(p);
+    File NTFS={5,0,"NTFS","","",0,"",0,-1};
+    w.WinListFile.erase(w.WinListFile.begin() + 5);
+    w.WinListFile.push_back(NTFS);
+    w.displayFAT(NULL,p.m,w.rootFAT);
+    w.displayFile(listFile, 5,w.rootNTFS);
+
     w.show();
     return a.exec();
 }

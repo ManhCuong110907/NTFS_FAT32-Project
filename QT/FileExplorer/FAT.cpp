@@ -564,13 +564,13 @@ void updateListFile(vector<Item*>m, vector<File>& Fi)
             Folder *f=dynamic_cast<Folder*>(x);
             if (f)
             {
-
+                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),"",1,x->offset});
                 updateListFile(f->items, Fi);
 
             }
             else
             {
-                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1 });
+                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1,x->offset});
             }
         }
 }
@@ -642,5 +642,29 @@ void Program::RecycleBin(string name)
             List_DI.erase(List_DI.begin()+index);
         }
         index++;
+    }
+}
+void GetPname(vector<Item*>m, string Pname, string& s, int offset)
+{
+    for (auto x : m)
+    {
+        Folder* f = dynamic_cast<Folder*>(x);
+        if (f)
+        {
+            if (f->offset == offset)
+                s = Pname;
+            else
+            {
+                string tmp = Pname;
+                Pname = f->name;
+                GetPname(f->items, Pname, s, offset);
+                Pname = tmp;
+            }
+        }
+        else
+        {
+            if (x->offset == offset)
+                s = Pname;
+        }
     }
 }

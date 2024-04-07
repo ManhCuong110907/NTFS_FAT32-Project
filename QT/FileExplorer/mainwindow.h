@@ -11,29 +11,27 @@ namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
-struct QItem
-{
-    QString name;
-    QString attribute;
-    QString creationTime;
-    QString size;
-};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-private:
-    Program P;
+
 public:
-    void updateProgram(Program p);
     Ui::MainWindow *ui;
     vector<File> WinListFile;
+    Program P;
+    QTreeWidgetItem *rootNTFS = NULL;
+    QTreeWidgetItem *rootFAT = NULL;
+    QTreeWidgetItem *rootBIN = NULL;
+    vector<pair<QTreeWidgetItem*, QTreeWidgetItem*>> deletedItemList; //first: item, second: oldparent
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    QTreeWidgetItem * addRoot(QItem item);
-    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QItem item,bool isFolder);
+    void updateProgram(Program p);
+    QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
+    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size,bool isFolder);
     void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);
     void displayTreeLabels();
-    void displayFAT(vector<Item*>m,QTreeWidgetItem *parentItem);
+    void displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem);
     void displayFileContent(QString filename);
 
 private slots:
@@ -41,6 +39,4 @@ private slots:
     void showContextMenu(const QPoint &pos);
     void on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
 };
-
-
-#endif
+#endif // MAINWINDOW_H
