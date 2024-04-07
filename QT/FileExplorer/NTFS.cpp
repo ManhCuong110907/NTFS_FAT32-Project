@@ -246,7 +246,7 @@ void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry) {
     HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);
     //cout << HeaderMFTEntry.ID << endl;
 }
-void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content) {
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content, VBR VBR) {
     //StandardContent
     if(content.Type == 0x10) {
         int ContentAttributeOffset = HeaderAttributeOffset + getBytes(MFTEntry, HeaderAttributeOffset + 0x14, 2);
@@ -305,8 +305,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
                     std::cerr << "Can't open disk 2" << std::endl;
                 }
                 LARGE_INTEGER liDistanceToMove2;
-                //liDistanceToMove2.QuadPart = FirstCluster * VBR.SectorsPerCluster * VBR.BytesPerSector;
-                liDistanceToMove2.QuadPart = FirstCluster * 8 * 512;
+                liDistanceToMove2.QuadPart = FirstCluster * VBR.SectorsPerCluster * VBR.BytesPerSector;
                 LARGE_INTEGER liNewFilePointer2;
                 if (!SetFilePointerEx(hDrive2, liDistanceToMove2, &liNewFilePointer2, FILE_BEGIN)) {
                     cerr << "Failed to set file pointer 2!" << endl;
@@ -330,7 +329,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
     }
 }
 
-void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset) {
+void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset, VBR VBR) {
     //Header
     attribute.Type = getBytes(MFTEntry, HeaderAttributeOffset, 4);
     attribute.Length = getBytes(MFTEntry, HeaderAttributeOffset + 0x04, 4);
@@ -348,15 +347,15 @@ void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &att
     //Content
     Content* content = new Content;
     content->Type = attribute.Type;
-    readAttributeContent(MFTEntry, HeaderMFTEntry, attribute, HeaderAttributeOffset, *content);
+    readAttributeContent(MFTEntry, HeaderMFTEntry, attribute, HeaderAttributeOffset, *content, VBR);
     attribute.Content = content;
 }
-void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry) {
+void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry, VBR VBR) {
     readHeaderMFTEntry(Buffer_MFTEntry, MFTEntry.Header);
     int HeaderAttributeOffset = MFTEntry.Header.FirstAttrOffset;
     int nAttribute = 0;
     while(!EndMFTEntry(Buffer_MFTEntry, HeaderAttributeOffset)){
-        readAttribute(Buffer_MFTEntry, MFTEntry.Header, MFTEntry.ListAttribute[nAttribute], HeaderAttributeOffset);
+        readAttribute(Buffer_MFTEntry, MFTEntry.Header, MFTEntry.ListAttribute[nAttribute], HeaderAttributeOffset, VBR);
         HeaderAttributeOffset += MFTEntry.ListAttribute[nAttribute].Length;
         nAttribute++;
     }
@@ -383,7 +382,7 @@ void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR) {
         return;
     }
     MFTEntry TempMFTEntry;
-    readMFTEntry(Buffer_MFTEntry, TempMFTEntry);
+    readMFTEntry(Buffer_MFTEntry, TempMFTEntry, VBR);
     if(nMFTEntry == 0){ //$MFT
         int TotalClustersOfMFT = getBytes(Buffer_MFTEntry, 0x141, 1);
         numMFTEntry =  TotalClustersOfMFT*VBR.BytesPerSector*VBR.SectorsPerCluster / VBR.BytesPerEntry;
@@ -409,7 +408,7 @@ void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR) {
         if(Buffer[0] == 'F' && Buffer[1] == 'I' && Buffer[2] == 'L' && Buffer[3] == 'E')
         {
             MFT.listMFTEntry[nMFTEntry].Header.FirstOffset = liDistanceToMove.QuadPart;
-            readMFTEntry(Buffer, MFT.listMFTEntry[nMFTEntry++]);
+            readMFTEntry(Buffer, MFT.listMFTEntry[nMFTEntry++], VBR);
 
         }
         liDistanceToMove.QuadPart += VBR.BytesPerEntry ;

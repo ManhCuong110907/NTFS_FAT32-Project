@@ -5,7 +5,7 @@
 #include <QTreeWidgetItem>
 #include <QDebug>
 #include "NTFS.h"
-#include"FAT.h"
+#include"FAT32.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -19,12 +19,14 @@ class MainWindow : public QMainWindow
 public:
     Ui::MainWindow *ui;
     vector<File> WinListFile;
+    Program P;
     QTreeWidgetItem *rootNTFS = NULL;
     QTreeWidgetItem *rootFAT = NULL;
     QTreeWidgetItem *rootBIN = NULL;
     vector<pair<QTreeWidgetItem*, QTreeWidgetItem*>> deletedItemList; //first: item, second: oldparent
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void updateProgram(Program p);
     QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
     QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size,bool isFolder);
     void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);

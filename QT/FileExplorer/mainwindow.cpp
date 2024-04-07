@@ -111,7 +111,10 @@ void MainWindow::displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem
         }
     }
 }
-
+void MainWindow::updateProgram(Program p)
+{
+    P=p;
+}
 void MainWindow::displayFileContent(QString filename)
 {
     for(auto file : this->WinListFile)
@@ -134,6 +137,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
     if (!item)
         return;
 
+    // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
     // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
     QTreeWidgetItem *parentItem = item->parent();
     if (parentItem && parentItem->text(1) == "Recycle Bin") { //Chỗ này sửa điều kiện thành root cao nhất là type Recycle Bin
@@ -175,17 +179,37 @@ void MainWindow::showContextMenu(const QPoint &pos)
             else if (selectedAction == deleteAction) {
                 qDebug() << "Delete action triggered for:" << item->text(0);
                 // Thêm xử lý xóa tệp txt ở đây
-                for(auto &file : WinListFile)
+                for(auto file : WinListFile)
                 {
                     if(file.isUsing == 1){
                         QString parentItemName = parentItem->text(0);
-                        if(QString::fromStdString(file.Name) == itemName && parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        if(QString::fromStdString(file.Name) == itemName)
                         {
-                            deletedItemList.push_back(make_pair(item, parentItem));
-                            int index = parentItem->indexOfChild(item);
-                            parentItem->takeChild(index);
-                            rootBIN->addChild(item);
-                            deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                            {
+                                deletedItemList.push_back(make_pair(item, parentItem));
+                                int index = parentItem->indexOfChild(item);
+                                parentItem->takeChild(index);
+                                rootBIN->addChild(item);
+                                deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                            }
+                            else
+                            {
+                                string s;
+                                qDebug()<<parentItemName;
+                                string t=parentItemName.toStdString();
+                                GetPname(P.m,t,s,file.FirstOffset);
+                                if(s.empty())
+                                    s=t;
+                                if(parentItemName == QString::fromStdString(s))
+                                {
+                                    deletedItemList.push_back(make_pair(item, parentItem));
+                                    int index = parentItem->indexOfChild(item);
+                                    parentItem->takeChild(index);
+                                    rootBIN->addChild(item);
+                                    P.deleteItem(file.Name,file.FirstOffset);
+                                }
+                            }
                         }
                     }
                 }
@@ -203,13 +227,30 @@ void MainWindow::showContextMenu(const QPoint &pos)
                 {
                     if(file.isUsing == 1 || file.isUsing == 3){
                         QString parentItemName = parentItem->text(0);
-                        if(QString::fromStdString(file.Name) == itemName && parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        if(QString::fromStdString(file.Name) == itemName)
                         {
-                            deletedItemList.push_back(make_pair(item, parentItem));
-                            int index = parentItem->indexOfChild(item);
-                            parentItem->takeChild(index);
-                            rootBIN->addChild(item);
-                            deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                            {
+                                deletedItemList.push_back(make_pair(item, parentItem));
+                                int index = parentItem->indexOfChild(item);
+                                parentItem->takeChild(index);
+                                rootBIN->addChild(item);
+                                deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                            }
+                            else
+                            {
+                                string s;
+                                string t="FAT";
+                                GetPname(P.m,t,s,file.FirstOffset);
+                                if(parentItemName == QString::fromStdString(s))
+                                {
+                                    deletedItemList.push_back(make_pair(item, parentItem));
+                                    int index = parentItem->indexOfChild(item);
+                                    parentItem->takeChild(index);
+                                    rootBIN->addChild(item);
+                                    P.deleteItem(file.Name,file.FirstOffset);
+                                }
+                            }
                         }
                     }
                 }

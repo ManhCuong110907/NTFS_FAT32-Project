@@ -94,9 +94,9 @@ string getParentItemName(vector<File> listFile, int childID);
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR);
 void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry);
-void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry);
-void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content);
-void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset);
+void readMFTEntry(BYTE* Buffer_MFTEntry, MFTEntry &MFTEntry, VBR VBR);
+void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content, VBR VBR);
+void readAttribute(BYTE* MFTEntry,HeaderMFTEntry &HeaderMFTEntry, Attribute &attribute, int HeaderAttributeOffset, VBR VBR);
 void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR);
 
 //Print

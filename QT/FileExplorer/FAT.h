@@ -121,14 +121,17 @@ public:
     FAT f;
     BootSector bs;
     RDET rdet;
-    Program(FAT f, BootSector bs, RDET rdet) :f(f), bs(bs), rdet(rdet) {};
+    Program(){}
+    Program(FAT f, BootSector bs, RDET rdet) :f(f), bs(bs), rdet(rdet) {}
+    Program(const Program& other)
+        : f(other.f), bs(other.bs), rdet(other.rdet), m(other.m), List_DI(other.List_DI) {}
     vector<Item*>m;
     vector<int> GetNextCluster(int index);
     vector<uint8_t>ReadCluster(vector<int>v);
     vector<DeletedItems>List_DI;
     void updateFoldersize();
-    void ReadItem(Folder* f, vector<Entry>entry, vector<int>check);
-    void FindItem(Folder* f, vector<Item*>m,string name);
+    void ReadItem(Folder* f,vector<Entry>entry, vector<int>check);
+    void FindItem(vector<Item*>m,string name);
     void deleteItem(string name,int offset);
     void RecycleBin(string name);
     void RestoreItems(int offset,uint8_t data);
@@ -144,9 +147,9 @@ Day GetDay(int dec);
 string GetNameItem(map<int, vector<uint8_t>> data, int index);
 string readData(vector<uint8_t>& data);
 vector<Entry> ReadEntry(int offset,vector<uint8_t>d, vector<int>check);
-void displayFAT(Folder* f, vector<Item*>m);
 string DaytoString(Day d);
 string TimetoString(TimeF t, string d);
 string  AttributetoString(attribute a);
 long power(int base, int exponent);
-void updateListFile(Folder* f, vector<Item*>m, vector<File>& Fi);
+void updateListFile(vector<Item*>m, vector<File>& Fi);
+void GetPname(vector<Item*>m,string Pname,string& s,int offset);

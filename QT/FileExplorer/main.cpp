@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-    const char* drive = "\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
+    const char* drive = "\\\\.\\E:"; // Đường dẫn đến ổ đĩa D
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -21,10 +21,7 @@ int main(int argc, char *argv[])
     vector<File> listFile;
     getlistFile(MFT, listFile);
     updateSize(listFile, 5);
-    w.WinListFile = listFile;
-    File NTFS={5,0,"NTFS","","",0,"",0,-1};
-    w.WinListFile.erase(w.WinListFile.begin() + 5);
-    w.WinListFile.push_back(NTFS);
+
     //printFolderAndFile(listFile, 5, 0);
     CloseHandle(hDrive);
 
@@ -40,7 +37,14 @@ int main(int argc, char *argv[])
     vector<int> v;
     p.ReadItem(NULL,rdet.subEntry,v);
     p.updateFoldersize();
-
+    w.updateProgram(p);
+    vector<File>listFile2;
+    updateListFile(p.m,listFile2);
+    listFile.insert(listFile.end(),listFile2.begin(),listFile2.end());
+    w.WinListFile = listFile;
+    File NTFS={5,0,"NTFS","","",0,"",0,-1};
+    w.WinListFile.erase(w.WinListFile.begin() + 5);
+    w.WinListFile.push_back(NTFS);
     w.displayFAT(NULL,p.m,w.rootFAT);
     w.displayFile(listFile, 5,w.rootNTFS);
 
