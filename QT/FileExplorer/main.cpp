@@ -22,26 +22,27 @@ int main(int argc, char *argv[])
     getlistFile(MFT, listFile);
     updateSize(listFile, 5);
     w.WinListFile = listFile;
-    printFolderAndFile(listFile, 5, 0);
+    File NTFS={5,0,"NTFS","","",0,"",0,-1};
+    w.WinListFile.erase(w.WinListFile.begin() + 5);
+    w.WinListFile.push_back(NTFS);
+    //printFolderAndFile(listFile, 5, 0);
     CloseHandle(hDrive);
 
 
-//     BootSector bs;
-//     bs.ReadBootSector();
-//     FAT f;
-//     f.ReadFAT(bs.NumberSector_BFAT * bs.Size_Sector,bs.NumberSector_FAT*bs.Size_Sector*bs.Number_FAT);
-//     RDET rdet;
-//     rdet.Readdata((bs.NumberSector_BFAT + bs.NumberSector_FAT * bs.Number_FAT) * bs.Size_Sector);
-//     Program p(f,bs,rdet);
-//     vector<int> v;
-//     p.ReadItem(NULL,rdet.subEntry,v);
-//     p.updateFoldersize();
 
-    w.displayTreeLabels();
-    QTreeWidgetItem *root = w.addRoot("FAT","Partition", "","");
-    //w.displayFAT(NULL,p.m,root);
-    QTreeWidgetItem *root1 = w.addRoot("NTFS","Partition", "","");
-    w.displayFile(listFile, 5,root1);
+    BootSector bs;
+    bs.ReadBootSector();
+    FAT f;
+    f.ReadFAT(bs.NumberSector_BFAT * bs.Size_Sector,bs.NumberSector_FAT*bs.Size_Sector*bs.Number_FAT);
+    RDET rdet;
+    rdet.Readdata((bs.NumberSector_BFAT + bs.NumberSector_FAT * bs.Number_FAT) * bs.Size_Sector);
+    Program p(f,bs,rdet);
+    vector<int> v;
+    p.ReadItem(NULL,rdet.subEntry,v);
+    p.updateFoldersize();
+
+    w.displayFAT(NULL,p.m,w.rootFAT);
+    w.displayFile(listFile, 5,w.rootNTFS);
 
     w.show();
     return a.exec();

@@ -163,7 +163,7 @@ int GetDec(int id, int size, vector<uint8_t>data)
 }
 void BootSector::ReadBootSector()
 {
-    const char* drive = "\\\\.\\G:";
+    const char* drive = "\\\\.\\E:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -211,7 +211,7 @@ void BootSector::updateInf()
 }
 void FAT::ReadFAT(int index, int size)
 {
-    const char* drive = "\\\\.\\G:";
+    const char* drive = "\\\\.\\E:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -292,7 +292,7 @@ vector<Entry> ReadEntry(int offset,vector<uint8_t>d, vector<int> check)
             e.d = GetDay(GetDec(0x10, 2, pair.second));
             e.size = GetDec(0x1C, 4, pair.second);
             e.name = GetNameItem(data, pair.first);
-            cout << endl << pair.first << " " << e.offsetBegin <<" "<< e.name << endl;
+            //cout << endl << pair.first << " " << e.offsetBegin <<" "<< e.name << endl;
             int ck = 0;
             for (auto x : check)
             {
@@ -308,7 +308,7 @@ vector<Entry> ReadEntry(int offset,vector<uint8_t>d, vector<int> check)
 void RDET::Readdata(int offset)
 {
     vector<Entry>entry;
-    const char* drive = "\\\\.\\G:";
+    const char* drive = "\\\\.\\E:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -345,7 +345,7 @@ void RDET::Readdata(int offset)
 }
 vector<uint8_t>Program::ReadCluster(vector<int>v)
 {
-    const char* drive = "\\\\.\\G:";
+    const char* drive = "\\\\.\\E:";
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -508,7 +508,7 @@ void Program::deleteItem(string name,int offset) {
     int Soffset = (offset / 512) * 512;
     int Roffset = offset % 512;
     cout << endl << Soffset << " " << Roffset << endl;
-    std::wstring path = L"\\\\.\\G:"; // Đường dẫn đến ổ đĩa T
+    std::wstring path = L"\\\\.\\E:"; // Đường dẫn đến ổ đĩa T
     HANDLE hDrive = CreateFileW(
         path.c_str(),                  // Sử dụng c_str() để chuyển đổi wstring sang LPCWSTR
         GENERIC_READ | GENERIC_WRITE, // Quyền truy cập (đọc và ghi)
@@ -536,9 +536,9 @@ void Program::deleteItem(string name,int offset) {
     }
     DWORD bytesReturned;
     if (!DeviceIoControl(hDrive, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL)) {
-        std::cerr << "Failed to lock drive G:\n";
+        std::cerr << "Failed to lock drive E:\n";
     } else {
-        std::cout << "Drive G: locked successfully\n";
+        std::cout << "Drive E: locked successfully\n";
     }
     if (!ReadFile(hDrive, temp.data(), 512, &bytesRead, NULL)) {
         DWORD error = GetLastError();
@@ -584,7 +584,6 @@ void Program::FindItem(Folder* f, vector<Item*>m, string name)
             {
                 if (x->name == name)
                     deleteItem(name,x->offset);
-                cout << 111111111111111;
             }
         }
     }
@@ -644,7 +643,7 @@ void Program::RestoreItems(int offset,uint8_t data)
     int Soffset = (offset / 512) * 512;
     int Roffset = offset % 512;
     cout << endl << Soffset << " " << Roffset << endl;
-    std::wstring path = L"\\\\.\\G:"; // Đường dẫn đến ổ đĩa T
+    std::wstring path = L"\\\\.\\E:"; // Đường dẫn đến ổ đĩa T
     HANDLE hDrive = CreateFileW(
         path.c_str(),                  // Sử dụng c_str() để chuyển đổi wstring sang LPCWSTR
         GENERIC_READ | GENERIC_WRITE, // Quyền truy cập (đọc và ghi)
@@ -672,9 +671,9 @@ void Program::RestoreItems(int offset,uint8_t data)
     }
     DWORD bytesReturned;
     if (!DeviceIoControl(hDrive, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL)) {
-        std::cerr << "Failed to lock drive G:\n";
+        std::cerr << "Failed to lock drive E:\n";
     } else {
-        std::cout << "Drive G: locked successfully\n";
+        std::cout << "Drive E: locked successfully\n";
     }
     if (!ReadFile(hDrive, temp.data(), 512, &bytesRead, NULL)) {
         DWORD error = GetLastError();

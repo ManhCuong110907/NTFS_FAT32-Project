@@ -1,5 +1,8 @@
 #include "NTFS.h"
-#include <bitset>
+#include <iostream>
+#include <string>
+#include <algorithm>
+using namespace std;
 //Check
 bool EndMFTEntry(BYTE* MFTEntry, int offset) {
     return getBytes(MFTEntry, offset, 4) == 0xffffffff;
@@ -28,7 +31,7 @@ int64_t getTwosComplement(int num, int numBits, bool &negative) {
         {
             result = ~result + 1;
             negative = true;
-        }   
+        }
         else result = result;
         return result;
     }
@@ -39,7 +42,7 @@ int64_t getTwosComplement(int num, int numBits, bool &negative) {
         {
             result = ~result + 1;
             negative = true;
-        }   
+        }
         else result = result;
         return result;
     }
@@ -50,7 +53,7 @@ int64_t getTwosComplement(int num, int numBits, bool &negative) {
         {
             result = ~result + 1;
             negative = true;
-        }   
+        }
         else result = result;
         return result;
     }
@@ -118,6 +121,21 @@ string getFileName(MFT &MFT, int ID) {
     }
     return "";
 }
+string getParentItemName(vector<File> listFile, int childID)
+{
+    for(auto& it : listFile) {
+        if(it.ID == childID) {
+            int parentID = it.parentID;
+            for(auto& it2 : listFile) {
+                if(it2.ID == parentID) {
+                    return it2.Name;
+                }
+            }
+        }
+    }
+    return "";
+}
+
 string getFileAttribute(MFT &MFT, int ID) {
     for(int i = 0; i < MFT.nMFTEntry; i++) {
         if(MFT.listMFTEntry[i].Header.ID == ID) {
@@ -177,17 +195,22 @@ void updateSize(vector<File> &listFile, int parentID) {
         }
     }
 }
+void deleteNULL(string &str) {
+    str.erase(remove(str.begin(), str.end(), '\0'), str.end());
+}
 void getlistFile(MFT &MFT, vector<File> &listFile){
     for(int i = 0; i < MFT.nMFTEntry; i++) {
             File file;
             file.ID = MFT.listMFTEntry[i].Header.ID;
             file.parentID = MFT.listMFTEntry[i].Header.ParentID;
             file.Name = MFT.listMFTEntry[i].Header.Filename;
+            deleteNULL(file.Name); 
             file.Attribute = getFileAttribute(MFT, MFT.listMFTEntry[i].Header.ID);
             file.CreationTime = getCreationTime(MFT, MFT.listMFTEntry[i].Header.ID);
             file.Size = getSize(MFT, MFT.listMFTEntry[i].Header.ID);
             file.Data = MFT.listMFTEntry[i].Header.data;
             file.isUsing = MFT.listMFTEntry[i].Header.Flags;
+            file.FirstOffset = MFT.listMFTEntry[i].Header.FirstOffset;
             listFile.push_back(file);
     }
 }
@@ -197,7 +220,7 @@ void readVBR(HANDLE hDrive, VBR &VBR) {
     DWORD bytesRead;
     if (!ReadFile(hDrive, Buffer_VBR, sizeof(Buffer_VBR), &bytesRead, NULL)) {
         cerr << "Can't read bootsector" << std::endl;
-        //CloseHandle(hDrive);
+        CloseHandle(hDrive);
         return;
     }
     VBR.BytesPerSector = getBytes(Buffer_VBR, 0x0B, 2);
@@ -220,7 +243,8 @@ void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry) {
     HeaderMFTEntry.Flags = getBytes(MFTEntry, 0x16, 2);
     HeaderMFTEntry.UsedSize = getBytes(MFTEntry, 0x18, 4);
     HeaderMFTEntry.EntrySize = getBytes(MFTEntry, 0x1C, 4);
-    HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);  
+    HeaderMFTEntry.ID = getBytes(MFTEntry, 0x2C, 4);
+    //cout << HeaderMFTEntry.ID << endl;
 }
 void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribute &attribute, int HeaderAttributeOffset, Content &content) {
     //StandardContent
@@ -286,22 +310,23 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
                 LARGE_INTEGER liNewFilePointer2;
                 if (!SetFilePointerEx(hDrive2, liDistanceToMove2, &liNewFilePointer2, FILE_BEGIN)) {
                     cerr << "Failed to set file pointer 2!" << endl;
+                    CloseHandle(hDrive2);
                     return ;
                 }
-                BYTE* Buffer = new BYTE[clusterCount*8*512]; 
+                BYTE* Buffer = new BYTE[clusterCount*8*512];
                 DWORD bytesRead;
                 if (!ReadFile(hDrive2, Buffer, clusterCount*8*512, &bytesRead, NULL)) {
                     cerr << "Can't read Buffer " << endl;
+                    CloseHandle(hDrive2);
                     return;
                 }
-                if(HeaderMFTEntry.ID == 48)
-                    cout << "ContentOffset: " <<ContentAttributeOffset << " FirstCluster: " << FirstCluster << " ClusterCount: " << clusterCount << endl;
                 string temp(reinterpret_cast<char*>(Buffer), clusterCount * 8 * 512);
                 tmpdata += temp;
                 ContentAttributeOffset = ContentAttributeOffset + 1 + BytesForClusterCount + BytesForFirstCluster;
+                CloseHandle(hDrive2);
             }
             HeaderMFTEntry.data = tmpdata;
-        }  
+        }
     }
 }
 
@@ -343,43 +368,54 @@ void readMFT(HANDLE hDrive, MFT &MFT, VBR VBR) {
     LARGE_INTEGER liNewFilePointer;
     if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
         cerr << "Failed to set file pointer!" << endl;
-        //CloseHandle(hDrive);
+        CloseHandle(hDrive);
         return ;
     }
     const int sizePerEntry = VBR.BytesPerEntry;
     int nMFTEntry = 0;
     int numMFTEntry = -1;
     //$MFT
-    BYTE* Buffer_MFTEntry = new BYTE[sizePerEntry]; 
+    BYTE* Buffer_MFTEntry = new BYTE[sizePerEntry];
     DWORD bytesRead;
     if (!ReadFile(hDrive, Buffer_MFTEntry, sizePerEntry, &bytesRead, NULL)) {
         cerr << "Can't read MFTEntry " << nMFTEntry << endl;
-        //CloseHandle(hDrive);
+        CloseHandle(hDrive);
         return;
     }
     MFTEntry TempMFTEntry;
     readMFTEntry(Buffer_MFTEntry, TempMFTEntry);
-    if(nMFTEntry == 0){ //$MFT 
+    if(nMFTEntry == 0){ //$MFT
         int TotalClustersOfMFT = getBytes(Buffer_MFTEntry, 0x141, 1);
         numMFTEntry =  TotalClustersOfMFT*VBR.BytesPerSector*VBR.SectorsPerCluster / VBR.BytesPerEntry;
         MFT.listMFTEntry = new MFTEntry[numMFTEntry];
     }
 
+    //Set vể vị trí đầu tiên của MFT
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer!" << endl;
+        CloseHandle(hDrive);
+        return ;
+    }
 
     for(int i = 0;i < numMFTEntry;i++){
-        BYTE* Buffer = new BYTE[sizePerEntry]; 
+
+        BYTE* Buffer = new BYTE[sizePerEntry];
         DWORD Read;
         if (!ReadFile(hDrive, Buffer, sizePerEntry, &Read, NULL)) {
             cerr << "Can't read MFTEntry " << nMFTEntry << endl;
-            //CloseHandle(hDrive);
+            CloseHandle(hDrive);
             return;
         }
         if(Buffer[0] == 'F' && Buffer[1] == 'I' && Buffer[2] == 'L' && Buffer[3] == 'E')
+        {
+            MFT.listMFTEntry[nMFTEntry].Header.FirstOffset = liDistanceToMove.QuadPart;
             readMFTEntry(Buffer, MFT.listMFTEntry[nMFTEntry++]);
+
+        }
         liDistanceToMove.QuadPart += VBR.BytesPerEntry ;
         if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
             cerr << "Failed to set file pointer!" << endl;
-            //CloseHandle(hDrive);
+            CloseHandle(hDrive);
             return ;
         }
     }
@@ -407,4 +443,130 @@ void printFolderAndFile(vector<File> listFile, int parentFolderID, int level = 0
             printFolderAndFile(listFile, it.ID, level + 1);
         }
     }
+}
+void deleteFile_NTFS(long long offset, int &flag) {
+    wstring path = L"\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
+    HANDLE hDrive = CreateFileW(
+        path.c_str(),                  // Sử dụng c_str() để chuyển đổi wstring sang LPCWSTR
+        GENERIC_READ | GENERIC_WRITE, // Quyền truy cập (đọc và ghi)
+        FILE_SHARE_READ | FILE_SHARE_WRITE, // Chia sẻ tập tin
+        NULL,                         // Thông số bổ sung (không cần thiết)
+        OPEN_EXISTING,                // Mở tập tin hiện tại
+        0,                            // Thuộc tính (không cần thiết)
+        NULL                          // Thao tác đồng bộ hoặc bất đồng bộ (không cần thiết)
+    );
+
+    if (hDrive == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        cerr << "Failed to open disk. Error code: " << error << endl;
+    }
+    LARGE_INTEGER liDistanceToMove;
+    liDistanceToMove.QuadPart = offset;
+    LARGE_INTEGER liNewFilePointer;
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer to Delete!" << endl;
+        CloseHandle(hDrive);
+    }
+    BYTE Buffer[512];
+    DWORD bytesRead;
+    if (!ReadFile(hDrive, Buffer, 512, &bytesRead, NULL)) {
+        cerr << "Can't read MFTEntry " << endl;
+        CloseHandle(hDrive);
+    }
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer to Delete!" << endl;
+        CloseHandle(hDrive);
+    }
+    DWORD bytesReturned;
+    if (!DeviceIoControl(hDrive, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL)) {
+        DWORD error = GetLastError();
+        std::cerr << "Failed to lock drive. " << "Error code: " << error << std::endl;
+    } else {
+        std::cout << "Drive locked successfully\n";
+    }
+    if(flag == 1){
+        Buffer[0x16] = 0x00;
+        DWORD bytesWritten;
+        if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
+            cerr << "Can't write MFTEntry " << endl;
+            CloseHandle(hDrive);
+        }
+        flag = 0;
+    }
+    else if(flag == 3){
+        Buffer[0x16] = 0x02;
+        DWORD bytesWritten;
+        if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
+            cerr << "Can't write MFTEntry " << endl;
+            CloseHandle(hDrive);
+        }
+        flag = 2;
+    }
+    CloseHandle(hDrive);
+}
+
+void restoreFile_NTFS(long long offset, int &flag) {
+    wstring path = L"\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
+    HANDLE hDrive = CreateFileW(
+        path.c_str(),                  // Sử dụng c_str() để chuyển đổi wstring sang LPCWSTR
+        GENERIC_READ | GENERIC_WRITE, // Quyền truy cập (đọc và ghi)
+        FILE_SHARE_READ | FILE_SHARE_WRITE, // Chia sẻ tập tin
+        NULL,                         // Thông số bổ sung (không cần thiết)
+        OPEN_EXISTING,                // Mở tập tin hiện tại
+        0,                            // Thuộc tính (không cần thiết)
+        NULL                          // Thao tác đồng bộ hoặc bất đồng bộ (không cần thiết)
+    );
+
+    if (hDrive == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        cerr << "Failed to open disk. Error code: " << error << endl;
+    }
+    LARGE_INTEGER liDistanceToMove;
+    liDistanceToMove.QuadPart = offset;
+    LARGE_INTEGER liNewFilePointer;
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer to Restore!" << endl;
+        CloseHandle(hDrive);
+        return;
+    }
+    BYTE Buffer[512];
+    DWORD bytesRead;
+    if (!ReadFile(hDrive, Buffer, 512, &bytesRead, NULL)) {
+        cerr << "Can't read MFTEntry " << endl;
+        CloseHandle(hDrive);
+        return;
+    }
+    if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
+        cerr << "Failed to set file pointer to Restore!" << endl;
+        CloseHandle(hDrive);
+        return;
+    }
+    DWORD bytesReturned;
+    if (!DeviceIoControl(hDrive, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL)) {
+        DWORD error = GetLastError();
+        std::cerr << "Failed to lock drive. " << "Error code: " << error << std::endl;
+    } else {
+        std::cout << "Drive locked successfully\n";
+    }
+    if(flag == 0){
+        Buffer[0x16] = 0x01;
+        DWORD bytesWritten;
+        if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
+            cerr << "Can't write MFTEntry " << endl;
+            CloseHandle(hDrive);
+            return;
+        }
+        flag = 1;
+    }
+    else if(flag == 2){
+        Buffer[0x16] = 0x03;
+        DWORD bytesWritten;
+        if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
+            cerr << "Can't write MFTEntry " << endl;
+            CloseHandle(hDrive);
+            return;
+        }
+        flag = 3;
+    }
+    CloseHandle(hDrive);
 }

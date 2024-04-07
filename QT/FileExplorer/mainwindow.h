@@ -19,6 +19,10 @@ class MainWindow : public QMainWindow
 public:
     Ui::MainWindow *ui;
     vector<File> WinListFile;
+    QTreeWidgetItem *rootNTFS = NULL;
+    QTreeWidgetItem *rootFAT = NULL;
+    QTreeWidgetItem *rootBIN = NULL;
+    vector<pair<QTreeWidgetItem*, QTreeWidgetItem*>> deletedItemList; //first: item, second: oldparent
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);

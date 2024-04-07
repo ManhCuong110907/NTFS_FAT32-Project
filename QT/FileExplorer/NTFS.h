@@ -28,7 +28,7 @@ struct HeaderMFTEntry{
     uint16_t Flags;
     uint32_t UsedSize;
     uint32_t EntrySize;
-    uint32_t ID;
+    uint32_t ID ;
 
     uint32_t ParentID;
     Time CreationTime;
@@ -36,6 +36,7 @@ struct HeaderMFTEntry{
     string Filename;
     float dataSize;
     string data="";
+    long long FirstOffset;
 };
 class Content{
 public:
@@ -76,6 +77,7 @@ struct File{
     double Size;
     string Data;
     int isUsing = 0;
+    long long FirstOffset;
 };
 #pragma pack(pop)
 //Get
@@ -88,6 +90,7 @@ string getCreationTime(MFT &MFT, int ID);
 double getSize(MFT &MFT, int ID);
 void getlistFile(MFT &MFT, vector<File> &listFile);
 void updateSize(vector<File> &listFile, int parentID);
+string getParentItemName(vector<File> listFile, int childID);
 //Read
 void readVBR(HANDLE hDrive, VBR &VBR);
 void readHeaderMFTEntry(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry);
@@ -102,7 +105,9 @@ void printHeaderMFTEntry(HeaderMFTEntry &HeaderMFTEntry);
 void printFolderAndFile(vector<File> listFile, int parentFolderID, int level);
 
 //Delete
-void deleteFile(MFT &MFT);
+void deleteFile_NTFS(long long offset, int &flag);
+//Restore
+void restoreFile_NTFS(long long offset, int &flag);
 #endif
 
 

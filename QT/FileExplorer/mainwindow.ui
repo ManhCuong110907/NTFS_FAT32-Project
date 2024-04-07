@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>779</width>
-    <height>656</height>
+    <width>673</width>
+    <height>583</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,8 +21,8 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>0</y>
-      <width>661</width>
+      <y>10</y>
+      <width>651</width>
       <height>281</height>
      </rect>
     </property>
@@ -52,16 +52,19 @@ QTreeWidget::item:selected{
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>280</y>
-      <width>661</width>
+      <y>300</y>
+      <width>651</width>
       <height>231</height>
      </rect>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::WinPanel</enum>
     </property>
     <property name="frameShadow">
      <enum>QFrame::Plain</enum>
     </property>
     <property name="lineWidth">
-     <number>2</number>
+     <number>1</number>
     </property>
     <property name="html">
      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -82,7 +85,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>779</width>
+     <width>673</width>
      <height>21</height>
     </rect>
    </property>

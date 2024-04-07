@@ -6,6 +6,13 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    displayTreeLabels();
+    rootFAT = addRoot("FAT","Partition", "","");
+    rootNTFS = addRoot("NTFS","Partition", "","");
+    rootBIN = addRoot("BIN","Recycle Bin", "","");
+
+
     ui->treeWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &MainWindow::showContextMenu);
 }
@@ -24,7 +31,9 @@ void MainWindow::displayTreeLabels(){
 QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString time, QString size){
     QTreeWidgetItem *root = new QTreeWidgetItem(ui->treeWidget);
     root->setText(0, filename);
-    root->setIcon(0,QIcon("D:/imgDisk2.png"));
+    if(type == "Recycle Bin")
+        root->setIcon(0,QIcon("E:/imgBin.png"));
+    else root->setIcon(0,QIcon("E:/imgDisk2.png"));
     root->setText(1, type);
     root->setText(2, time);
     root->setText(3, size);
@@ -35,10 +44,14 @@ QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename,
 {
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
-    if(isFolder==1)
-        child->setIcon(0,QIcon("D:/imgFolder.png"));
-    else
-        child->setIcon(0,QIcon("D:/imgFile.png"));
+    if(isFolder == 1)
+        child->setIcon(0,QIcon("E:/imgFolder.png"));
+    else if(filename.contains(".pdf", Qt::CaseInsensitive))
+        child->setIcon(0,QIcon("E:/imgPDF.png"));
+    else if(filename.contains(".png", Qt::CaseInsensitive))
+        child->setIcon(0,QIcon("E:/imgPNG.png"));
+    else child->setIcon(0,QIcon("E:/imgFile.png"));
+
     child->setText(1, type);
     child->setText(2, time);
     child->setText(3, size);
@@ -121,20 +134,33 @@ void MainWindow::showContextMenu(const QPoint &pos)
     if (!item)
         return;
 
-    // Kiểm tra xem mục cha của mục được chọn có tên là "Recycle Bin" hay không
+    // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
     QTreeWidgetItem *parentItem = item->parent();
-    if (parentItem && parentItem->text(0) == "Recycle Bin") {
+    if (parentItem && parentItem->text(1) == "Recycle Bin") { //Chỗ này sửa điều kiện thành root cao nhất là type Recycle Bin
         // Nếu mục cha có tên là "Recycle Bin", chỉ hiển thị tùy chọn "Restore"
         QMenu menu;
         QAction *restoreAction = menu.addAction("Restore");
-
         QAction *selectedAction = menu.exec(ui->treeWidget->mapToGlobal(pos));
+
+        QString itemName = item->text(0);
         if (selectedAction == restoreAction) {
             qDebug() << "Restore action triggered for:" << item->text(0);
-            // Thêm xử lý khôi phục tệp/thư mục ở đây
+            for(auto it : deletedItemList){
+                if(it.first == item){
+                    int index = parentItem->indexOfChild(item);
+                    parentItem->takeChild(index);
+                    it.second->addChild(item);
+                    for(auto &file : WinListFile){
+                        if(QString::fromStdString(file.Name) == itemName && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        {
+                            restoreFile_NTFS(file.FirstOffset, file.isUsing);
+                        }
+                    }
+                }
+            }
         }
-    } else {
-        // Nếu không phải "Recycle Bin", kiểm tra xem mục có chứa ".txt" không
+    }
+    else if(parentItem && item->text(1) != "Partition") {
         QString itemName = item->text(0);
         if (itemName.contains(".txt", Qt::CaseInsensitive)) {
             // Nếu chứa ".txt", hiển thị tất cả các tùy chọn menu
@@ -144,12 +170,25 @@ void MainWindow::showContextMenu(const QPoint &pos)
 
             QAction *selectedAction = menu.exec(ui->treeWidget->mapToGlobal(pos));
             if (selectedAction == openAction) {
-                // Gọi hàm xử lý tương tự như khi double-click
-                on_treeWidget_itemDoubleClicked(item, 0); // 0 là chỉ số cột, có thể thay đổi nếu cần
+                on_treeWidget_itemDoubleClicked(item, 0);
             }
             else if (selectedAction == deleteAction) {
                 qDebug() << "Delete action triggered for:" << item->text(0);
-                // Thêm xử lý xóa tệp/thư mục ở đây
+                // Thêm xử lý xóa tệp txt ở đây
+                for(auto &file : WinListFile)
+                {
+                    if(file.isUsing == 1){
+                        QString parentItemName = parentItem->text(0);
+                        if(QString::fromStdString(file.Name) == itemName && parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        {
+                            deletedItemList.push_back(make_pair(item, parentItem));
+                            int index = parentItem->indexOfChild(item);
+                            parentItem->takeChild(index);
+                            rootBIN->addChild(item);
+                            deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                        }
+                    }
+                }
             }
         } else {
             // Nếu không chứa ".txt", chỉ hiển thị tùy chọn "Delete"
@@ -160,6 +199,20 @@ void MainWindow::showContextMenu(const QPoint &pos)
             if (selectedAction == deleteAction) {
                 qDebug() << "Delete action triggered for:" << item->text(0);
                 // Thêm xử lý xóa tệp/thư mục ở đây
+                for(auto file : WinListFile)
+                {
+                    if(file.isUsing == 1 || file.isUsing == 3){
+                        QString parentItemName = parentItem->text(0);
+                        if(QString::fromStdString(file.Name) == itemName && parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        {
+                            deletedItemList.push_back(make_pair(item, parentItem));
+                            int index = parentItem->indexOfChild(item);
+                            parentItem->takeChild(index);
+                            rootBIN->addChild(item);
+                            deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                        }
+                    }
+                }
             }
         }
     }
