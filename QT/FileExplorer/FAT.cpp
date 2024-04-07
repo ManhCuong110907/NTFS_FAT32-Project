@@ -1,4 +1,4 @@
-﻿#include"FAT.h"
+﻿#include"FAT32.h"
 
 string readData(vector<uint8_t>& data) {
     string result = "";
@@ -474,36 +474,7 @@ string  AttributetoString(attribute a)
         s += "Folder";
     return s;
 }
-void displayFAT(Folder* f, vector<Item*>m)
-{
-    if (f == NULL)
-    {
-        for (auto x : m)
-        {
-            if (dynamic_cast<Folder*>(x))
-            {
-                cout <<x->offset<<" "<< AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time, DaytoString(x->day)) << endl;
-                displayFAT(dynamic_cast<Folder*>(x), m);
 
-            }
-            else
-                cout << x->offset << " " << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time, DaytoString(x->day)) << endl;
-        }
-    }
-    else
-    {
-        for (auto x : f->items)
-        {
-            if (dynamic_cast<Folder*>(x))
-            {
-                cout << x->offset << " " << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time, DaytoString(x->day)) << endl;
-                displayFAT(dynamic_cast<Folder*>(x), m);
-            }
-            else
-                cout << x->offset << " " << AttributetoString(x->a) << " " << x->name << ":" << x->size << " " << DaytoString(x->day) << " " << TimetoString(x->time, DaytoString(x->day)) << endl;
-        }
-    }
-}
 void Program::deleteItem(string name,int offset) {
     int Soffset = (offset / 512) * 512;
     int Roffset = offset % 512;
@@ -567,18 +538,16 @@ void Program::deleteItem(string name,int offset) {
     CloseHandle(hDrive);
 }
 
-void Program::FindItem(Folder* f, vector<Item*>m, string name)
+void Program::FindItem(vector<Item*>m, string name)
 {
-    int result = 0;
-    if (f == NULL)
-    {
         for (auto x : m)
         {
-            if (dynamic_cast<Folder*>(x))
+            Folder *f=dynamic_cast<Folder*>(x);
+            if (f)
             {
-                if (x->name == name)
-                    deleteItem(name,x->offset);
-                FindItem(dynamic_cast<Folder*>(x), m,name);
+                if (f->name == name)
+                    deleteItem(name,f->offset);
+                FindItem(f->items,name);
             }
             else
             {
@@ -587,36 +556,16 @@ void Program::FindItem(Folder* f, vector<Item*>m, string name)
                 cout << 111111111111111;
             }
         }
-    }
-    else
-    {
-        for (auto x : f->items)
-        {
-            if (dynamic_cast<Folder*>(x))
-            {
-                if (x->name == name)
-                    deleteItem(name,x->offset);
-                FindItem(dynamic_cast<Folder*>(x), m,name);
-            }
-            else
-            {
-                if (x->name == name)
-                    deleteItem(name,x->offset);
-            }
-
-        }
-    }
 }
-void updateListFile(Folder* f, vector<Item*>m, vector<File>& Fi)
+void updateListFile(vector<Item*>m, vector<File>& Fi)
 {
-    if (f == NULL)
-    {
         for (auto x : m)
         {
-            if (dynamic_cast<Folder*>(x))
+            Folder *f=dynamic_cast<Folder*>(x);
+            if (f)
             {
 
-                updateListFile(dynamic_cast<Folder*>(x), m, Fi);
+                updateListFile(f->items, Fi);
 
             }
             else
@@ -624,20 +573,6 @@ void updateListFile(Folder* f, vector<Item*>m, vector<File>& Fi)
                 Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1 });
             }
         }
-    }
-    else
-    {
-        for (auto x : f->items)
-        {
-            if (dynamic_cast<Folder*>(x))
-            {
-                updateListFile(dynamic_cast<Folder*>(x), m, Fi);
-
-            }
-            else
-                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1 });
-        }
-    }
 }
 void Program::RestoreItems(int offset,uint8_t data)
 {
