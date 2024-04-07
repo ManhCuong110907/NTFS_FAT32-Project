@@ -113,7 +113,9 @@ void MainWindow::showContextMenu(const QPoint &pos)
         return;
 
     // Kiểm tra xem mục cha của mục được chọn có tên là "Recycle Bin" hay không
-    QTreeWidgetItem *parentItem = item->parent();
+    QTreeWidgetItem *parentItem = ui->treeWidget->topLevelItem(ui->treeWidget->indexOfTopLevelItem(item));
+    QTreeWidgetItem *parentItem =item->parent();
+    parentItem->text(0);
     if (parentItem && parentItem->text(0) == "Recycle Bin") {
         // Nếu mục cha có tên là "Recycle Bin", chỉ hiển thị tùy chọn "Restore"
         QMenu menu;

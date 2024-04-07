@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     it.size = "";
     QTreeWidgetItem *root = w.addRoot(it);
     w.displayFAT(p.m,root);
-    it.name = "FAT";
+    it.name = "NTFS";
     QTreeWidgetItem *root1 = w.addRoot(it);
     it.name = "Recycle Bin";
     QTreeWidgetItem *root2 = w.addRoot(it);

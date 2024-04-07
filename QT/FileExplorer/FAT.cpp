@@ -1,4 +1,4 @@
-﻿#include"FAT32.h"
+﻿#include"FAT.h"
 
 string readData(vector<uint8_t>& data) {
     string result = "";
