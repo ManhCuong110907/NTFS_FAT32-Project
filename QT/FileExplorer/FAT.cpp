@@ -558,20 +558,20 @@ void Program::FindItem(vector<Item*>m, string name)
 }
 void updateListFile(vector<Item*>m, vector<File>& Fi)
 {
-        for (auto x : m)
+    for (auto x : m)
+    {
+        Folder *f=dynamic_cast<Folder*>(x);
+        if (f)
         {
-            Folder *f=dynamic_cast<Folder*>(x);
-            if (f)
-            {
-                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),"",1,x->offset});
-                updateListFile(f->items, Fi);
+            Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),"",1,x->offset,1});
+            updateListFile(f->items, Fi);
 
-            }
-            else
-            {
-                Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1,x->offset});
-            }
         }
+        else
+        {
+            Fi.push_back({ -1,-1,x->name,AttributetoString(x->a),TimetoString(x->time,DaytoString(x->day)),double(x->size),dynamic_cast<FileF*>(x)->data,1,x->offset,1});
+        }
+    }
 }
 void Program::RestoreItems(int offset,uint8_t data)
 {

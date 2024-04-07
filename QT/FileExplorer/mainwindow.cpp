@@ -154,18 +154,23 @@ void MainWindow::showContextMenu(const QPoint &pos)
                     int index = parentItem->indexOfChild(item);
                     parentItem->takeChild(index);
                     it.second->addChild(item);
-                    P.RecycleBin(itemName.toStdString());
+                    int check=0;
                     for(auto &file : WinListFile){
                         if(QString::fromStdString(file.Name) == itemName && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
                         {
                             if(file.isFAT == 0)
+                            {
                                 restoreFile_NTFS(file.FirstOffset, file.isUsing);
+                                check=1;
+                            }
                             else break;
                             deletedItemList.erase(remove_if(deletedItemList.begin(), deletedItemList.end(), [item,parentItem](const pair<QTreeWidgetItem *, QTreeWidgetItem *> &p){
-                                return p.first == item && p.second == parentItem;
-                            }), deletedItemList.end());
+                                                      return p.first == item && p.second == parentItem;
+                                                  }), deletedItemList.end());
                         }
                     }
+                    if(check==1)
+                        P.RecycleBin(itemName.toStdString());
                 }
             }
         }
