@@ -78,6 +78,7 @@ struct File{
     string Data;
     int isUsing = 0;
     long long FirstOffset;
+    bool isFAT = 0;
 };
 #pragma pack(pop)
 //Get

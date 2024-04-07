@@ -577,7 +577,7 @@ void Program::RestoreItems(int offset,uint8_t data)
 {
     int Soffset = (offset / 512) * 512;
     int Roffset = offset % 512;
-    cout << endl << Soffset << " " << Roffset << endl;
+    //cout << endl << Soffset << " " << Roffset << endl;
     std::wstring path = L"\\\\.\\E:"; // Đường dẫn đến ổ đĩa T
     HANDLE hDrive = CreateFileW(
         path.c_str(),                  // Sử dụng c_str() để chuyển đổi wstring sang LPCWSTR

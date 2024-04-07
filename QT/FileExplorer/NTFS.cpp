@@ -312,7 +312,7 @@ void readAttributeContent(BYTE* MFTEntry, HeaderMFTEntry &HeaderMFTEntry,Attribu
                     CloseHandle(hDrive2);
                     return ;
                 }
-                BYTE* Buffer = new BYTE[clusterCount*8*512];
+                BYTE* Buffer = new BYTE[clusterCount * VBR.SectorsPerCluster * VBR.BytesPerSector];
                 DWORD bytesRead;
                 if (!ReadFile(hDrive2, Buffer, clusterCount*8*512, &bytesRead, NULL)) {
                     cerr << "Can't read Buffer " << endl;

@@ -128,7 +128,7 @@ void MainWindow::displayFileContent(QString filename)
 void MainWindow::on_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
 {
     // Lấy tên của item được double-clicked
-    QString itemName = item->text(0); // Giả sử tên tệp được lưu trong cột đầu tiên (có chỉ số là 0)
+    QString itemName = item->text(0); //
     displayFileContent(itemName);
 }
 void MainWindow::showContextMenu(const QPoint &pos)
@@ -138,9 +138,9 @@ void MainWindow::showContextMenu(const QPoint &pos)
         return;
 
     // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
-    // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
     QTreeWidgetItem *parentItem = item->parent();
-    if (parentItem && parentItem->text(1) == "Recycle Bin") { //Chỗ này sửa điều kiện thành root cao nhất là type Recycle Bin
+    //QTreeWidgetItem *rootItem = item->
+    if (parentItem && parentItem->text(1) == "Recycle Bin") {
         // Nếu mục cha có tên là "Recycle Bin", chỉ hiển thị tùy chọn "Restore"
         QMenu menu;
         QAction *restoreAction = menu.addAction("Restore");
@@ -154,10 +154,16 @@ void MainWindow::showContextMenu(const QPoint &pos)
                     int index = parentItem->indexOfChild(item);
                     parentItem->takeChild(index);
                     it.second->addChild(item);
+                    P.RecycleBin(itemName.toStdString());
                     for(auto &file : WinListFile){
                         if(QString::fromStdString(file.Name) == itemName && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
                         {
-                            restoreFile_NTFS(file.FirstOffset, file.isUsing);
+                            if(file.isFAT == 0)
+                                restoreFile_NTFS(file.FirstOffset, file.isUsing);
+                            else break;
+                            deletedItemList.erase(remove_if(deletedItemList.begin(), deletedItemList.end(), [item,parentItem](const pair<QTreeWidgetItem *, QTreeWidgetItem *> &p){
+                                return p.first == item && p.second == parentItem;
+                            }), deletedItemList.end());
                         }
                     }
                 }
@@ -185,7 +191,8 @@ void MainWindow::showContextMenu(const QPoint &pos)
                         QString parentItemName = parentItem->text(0);
                         if(QString::fromStdString(file.Name) == itemName)
                         {
-                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                            //Delete NTFS File.txt
+                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)) && file.isFAT == 0)
                             {
                                 deletedItemList.push_back(make_pair(item, parentItem));
                                 int index = parentItem->indexOfChild(item);
@@ -193,7 +200,8 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                 rootBIN->addChild(item);
                                 deleteFile_NTFS(file.FirstOffset,file.isUsing);
                             }
-                            else
+                            //Delete FAT File.txt
+                            else if(file.isFAT == 1)
                             {
                                 string s;
                                 qDebug()<<parentItemName;
@@ -229,7 +237,8 @@ void MainWindow::showContextMenu(const QPoint &pos)
                         QString parentItemName = parentItem->text(0);
                         if(QString::fromStdString(file.Name) == itemName)
                         {
-                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                            //Delete NTFS File/Folder
+                            if(parentItemName == QString::fromStdString(getParentItemName(WinListFile, file.ID)) && file.isFAT == 0)
                             {
                                 deletedItemList.push_back(make_pair(item, parentItem));
                                 int index = parentItem->indexOfChild(item);
@@ -237,7 +246,8 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                 rootBIN->addChild(item);
                                 deleteFile_NTFS(file.FirstOffset,file.isUsing);
                             }
-                            else
+                            //Delete FAT File/Folder
+                            else if(file.isFAT == 1)
                             {
                                 string s;
                                 string t="FAT";

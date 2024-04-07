@@ -5,7 +5,7 @@
 #include <QTreeWidgetItem>
 #include <QDebug>
 #include "NTFS.h"
-#include"FAT32.h"
+#include"FAT.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;

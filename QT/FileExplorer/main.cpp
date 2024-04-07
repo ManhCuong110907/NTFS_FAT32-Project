@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-    const char* drive = "\\\\.\\E:"; // Đường dẫn đến ổ đĩa D
+    const char* drive = "\\\\.\\D:"; // Đường dẫn đến ổ đĩa D
     HANDLE hDrive = CreateFileA(drive, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
 
     if (hDrive == INVALID_HANDLE_VALUE) {
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     updateListFile(p.m,listFile2);
     listFile.insert(listFile.end(),listFile2.begin(),listFile2.end());
     w.WinListFile = listFile;
-    File NTFS={5,0,"NTFS","","",0,"",0,-1};
+    File NTFS={5,0,"NTFS","","",0,"",0,-1,0};
     w.WinListFile.erase(w.WinListFile.begin() + 5);
     w.WinListFile.push_back(NTFS);
     w.displayFAT(NULL,p.m,w.rootFAT);
