@@ -160,7 +160,6 @@ void MainWindow::showContextMenu(const QPoint &pos)
                             if(file.isFAT == 0  && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
                             {
                                 restoreFile_NTFS(file.FirstOffset, file.isUsing);
-                                check=1;
                             }
                             else if(file.isFAT == 1)
                             {
@@ -197,7 +196,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
             else if (selectedAction == deleteAction) {
                 qDebug() << "Delete action triggered for:" << item->text(0);
                 // Thêm xử lý xóa tệp txt ở đây
-                for(auto file : WinListFile)
+                for(auto &file : WinListFile)
                 {
                     if(file.isUsing == 1){
                         QString parentItemName = parentItem->text(0);
@@ -243,7 +242,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
             if (selectedAction == deleteAction) {
                 qDebug() << "Delete action triggered for:" << item->text(0);
                 // Thêm xử lý xóa tệp/thư mục ở đây
-                for(auto file : WinListFile)
+                for(auto &file : WinListFile)
                 {
                     if(file.isUsing == 1 || file.isUsing == 3){
                         QString parentItemName = parentItem->text(0);

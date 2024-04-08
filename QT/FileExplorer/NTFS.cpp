@@ -211,6 +211,7 @@ void getlistFile(MFT &MFT, vector<File> &listFile){
             file.Data = MFT.listMFTEntry[i].Header.data;
             file.isUsing = MFT.listMFTEntry[i].Header.Flags;
             file.FirstOffset = MFT.listMFTEntry[i].Header.FirstOffset;
+            file.isFAT = 0;
             listFile.push_back(file);
     }
 }
@@ -526,26 +527,23 @@ void restoreFile_NTFS(long long offset, int &flag) {
     if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
         cerr << "Failed to set file pointer to Restore!" << endl;
         CloseHandle(hDrive);
-        return;
     }
     BYTE Buffer[512];
     DWORD bytesRead;
     if (!ReadFile(hDrive, Buffer, 512, &bytesRead, NULL)) {
         cerr << "Can't read MFTEntry " << endl;
         CloseHandle(hDrive);
-        return;
     }
     if (!SetFilePointerEx(hDrive, liDistanceToMove, &liNewFilePointer, FILE_BEGIN)) {
         cerr << "Failed to set file pointer to Restore!" << endl;
         CloseHandle(hDrive);
-        return;
     }
     DWORD bytesReturned;
     if (!DeviceIoControl(hDrive, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &bytesReturned, NULL)) {
         DWORD error = GetLastError();
-        std::cerr << "Failed to lock drive. " << "Error code: " << error << std::endl;
+        cerr << "Failed to lock drive. " << "Error code: " << error << std::endl;
     } else {
-        std::cout << "Drive locked successfully\n";
+        cerr << "Drive locked successfully\n";
     }
     if(flag == 0){
         Buffer[0x16] = 0x01;
@@ -553,7 +551,6 @@ void restoreFile_NTFS(long long offset, int &flag) {
         if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
             cerr << "Can't write MFTEntry " << endl;
             CloseHandle(hDrive);
-            return;
         }
         flag = 1;
     }
@@ -563,7 +560,6 @@ void restoreFile_NTFS(long long offset, int &flag) {
         if (!WriteFile(hDrive, Buffer, 512, &bytesWritten, NULL)) {
             cerr << "Can't write MFTEntry " << endl;
             CloseHandle(hDrive);
-            return;
         }
         flag = 3;
     }
