@@ -32,8 +32,8 @@ QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString ti
     QTreeWidgetItem *root = new QTreeWidgetItem(ui->treeWidget);
     root->setText(0, filename);
     if(type == "Recycle Bin")
-        root->setIcon(0,QIcon("E:/imgBin.png"));
-    else root->setIcon(0,QIcon("E:/imgDisk2.png"));
+        root->setIcon(0,QIcon("D:/RecycleBin.png"));
+    else root->setIcon(0,QIcon("D:/imgDisk2.png"));
     root->setText(1, type);
     root->setText(2, time);
     root->setText(3, size);
@@ -45,12 +45,12 @@ QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename,
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
     if(isFolder == 1)
-        child->setIcon(0,QIcon("E:/imgFolder.png"));
+        child->setIcon(0,QIcon("D:/imgFolder.png"));
     else if(filename.contains(".pdf", Qt::CaseInsensitive))
-        child->setIcon(0,QIcon("E:/imgPDF.png"));
+        child->setIcon(0,QIcon("D:/imgPDF.png"));
     else if(filename.contains(".png", Qt::CaseInsensitive))
-        child->setIcon(0,QIcon("E:/imgPNG.png"));
-    else child->setIcon(0,QIcon("E:/imgFile.png"));
+        child->setIcon(0,QIcon("D:/imgPNG.png"));
+    else child->setIcon(0,QIcon("D:/imgFile.png"));
 
     child->setText(1, type);
     child->setText(2, time);
@@ -154,23 +154,30 @@ void MainWindow::showContextMenu(const QPoint &pos)
                     int index = parentItem->indexOfChild(item);
                     parentItem->takeChild(index);
                     it.second->addChild(item);
-                    int check=0;
                     for(auto &file : WinListFile){
-                        if(QString::fromStdString(file.Name) == itemName && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
+                        if(QString::fromStdString(file.Name) == itemName)
                         {
-                            if(file.isFAT == 0)
+                            if(file.isFAT == 0  && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
                             {
                                 restoreFile_NTFS(file.FirstOffset, file.isUsing);
                                 check=1;
                             }
-                            else break;
+                            else if(file.isFAT == 1)
+                            {
+                                string s;
+                                string t=it.second->text(0).toStdString();
+                                GetPname(P.m,t,s,file.FirstOffset);
+                                if(s.empty())
+                                    s=t;
+                                if(it.second->text(0) == QString::fromStdString(s))
+                                    P.RecycleBin(itemName.toStdString());
+                            }
                             deletedItemList.erase(remove_if(deletedItemList.begin(), deletedItemList.end(), [item,parentItem](const pair<QTreeWidgetItem *, QTreeWidgetItem *> &p){
                                                       return p.first == item && p.second == parentItem;
                                                   }), deletedItemList.end());
                         }
+
                     }
-                    if(check==1)
-                        P.RecycleBin(itemName.toStdString());
                 }
             }
         }
@@ -273,6 +280,3 @@ void MainWindow::showContextMenu(const QPoint &pos)
         }
     }
 }
-
-
-
