@@ -1,9 +1,0 @@
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/FileExplorer.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/list_install_components.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/install.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/install/local.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/install/strip.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/FileExplorer_autogen_timestamp_deps.dir
-D:/Clone/NTFS_FAT32-Project/QT/build-FileExplorer-Desktop_Qt_6_6_3_MinGW_64_bit-Debug/CMakeFiles/FileExplorer_autogen.dir
