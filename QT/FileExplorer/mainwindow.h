@@ -28,10 +28,10 @@ public:
     ~MainWindow();
     void updateProgram(Program p);
     QTreeWidgetItem * addRoot(QString filename, QString type, QString time, QString size);
-    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size,bool isFolder);
+    QTreeWidgetItem * addChild(QTreeWidgetItem *&root,QString filename, QString type, QString time, QString size);
     void displayFile(vector<File> listFile, int parentFolderID, QTreeWidgetItem *parentItem);
     void displayTreeLabels();
-    void displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem);
+    void displayFAT(vector<Item*>m,QTreeWidgetItem *parentItem);
     void displayFileContent(QString filename);
 
 private slots:

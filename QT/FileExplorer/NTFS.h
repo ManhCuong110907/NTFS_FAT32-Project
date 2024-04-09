@@ -34,7 +34,7 @@ struct HeaderMFTEntry{
     Time CreationTime;
     int FileAttribute;
     string Filename;
-    float dataSize;
+    long long dataSize;
     string data="";
     long long FirstOffset;
 };

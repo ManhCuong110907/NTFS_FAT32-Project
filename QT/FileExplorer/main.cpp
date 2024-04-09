@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     File NTFS={5,0,"NTFS","","",0,"",0,-1,0};
     w.WinListFile.erase(w.WinListFile.begin() + 5);
     w.WinListFile.push_back(NTFS);
-    w.displayFAT(NULL,p.m,w.rootFAT);
+    w.displayFAT(p.m,w.rootFAT);
     w.displayFile(listFile, 5,w.rootNTFS);
 
     w.show();

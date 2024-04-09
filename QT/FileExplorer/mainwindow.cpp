@@ -40,11 +40,11 @@ QTreeWidgetItem * MainWindow::addRoot(QString filename, QString type, QString ti
     ui->treeWidget->addTopLevelItem(root);
     return root;
 }
-QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename, QString type, QString time, QString size,bool isFolder)
+QTreeWidgetItem * MainWindow::addChild(QTreeWidgetItem *&root, QString filename, QString type, QString time, QString size)
 {
     QTreeWidgetItem *child = new QTreeWidgetItem();
     child->setText(0, filename);
-    if(isFolder == 1)
+    if(type == "Folder")
         child->setIcon(0,QIcon("D:/imgFolder.png"));
     else if(filename.contains(".pdf", Qt::CaseInsensitive))
         child->setIcon(0,QIcon("D:/imgPDF.png"));
@@ -72,43 +72,28 @@ void MainWindow::displayFile(vector<File> listFile, int parentFolderID, QTreeWid
 
             if(attribute == "Folder")
             {
-                QTreeWidgetItem *item = addChild(parentItem, name, attribute, creationTime, size,1); // Thêm thư mục hoặc tệp vào cây thư mục
+                QTreeWidgetItem *item = addChild(parentItem, name, attribute, creationTime, size); // Thêm thư mục hoặc tệp vào cây thư mục
                 // Nếu là thư mục, gọi đệ quy để in các tệp và thư mục con của nó
                 displayFile(listFile, file.ID, item);
             }
             else
-                QTreeWidgetItem *item = addChild(parentItem, name, attribute, creationTime, size,0);
+                QTreeWidgetItem *item = addChild(parentItem, name, attribute, creationTime, size);
         }
     }
 }
-void MainWindow::displayFAT(Folder* f,vector<Item*>m,QTreeWidgetItem *parentItem)
+void MainWindow::displayFAT(vector<Item*>m,QTreeWidgetItem *parentItem)
 {
-    if(f==NULL)
+    for(auto x:m)
     {
-        for(auto x:m)
+        Folder *f=dynamic_cast<Folder*>(x);
+        if(f)
         {
-            if(dynamic_cast<Folder*>(x))
-            {
-                QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)),QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size),1);
-                displayFAT(dynamic_cast<Folder*>(x),m,item);
-            }
-            else
-                QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)),QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size),0);
-        }
-    }
-    else
-    {
-        for (auto x : f->items)
-        {
-            if (dynamic_cast<Folder*>(x))
-            {
-                QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)),QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size),1);
-                displayFAT(dynamic_cast<Folder*>(x),m,item);
 
-            }
-            else
-                QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)),QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size),0);
+            QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)), QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size));
+            displayFAT(f->items,item);
         }
+        else
+           QTreeWidgetItem *item=addChild(parentItem,QString::fromStdString(x->name),QString::fromStdString(AttributetoString(x->a)), QString::fromStdString(TimetoString(x->time,DaytoString(x->day))),QString::number(x->size));
     }
 }
 void MainWindow::updateProgram(Program p)
@@ -148,7 +133,6 @@ void MainWindow::showContextMenu(const QPoint &pos)
     // Kiểm tra xem mục cha của mục được chọn có loại là "Recycle Bin" hay không
     QTreeWidgetItem *parentItem = item->parent();
     QTreeWidgetItem *root = getRoot(item);
-    qDebug() << root->childCount();
     if (parentItem && root && root->text(1) == "Recycle Bin") {
         // Nếu mục cha có tên là "Recycle Bin", chỉ hiển thị tùy chọn "Restore"
         QMenu menu;
@@ -168,7 +152,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                         {
                             if(file.isFAT == 0  && it.second->text(0) == QString::fromStdString(getParentItemName(WinListFile, file.ID)))
                             {
-                               // restoreFile_NTFS(file.FirstOffset, file.isUsing);
+                               restoreFile_NTFS(file.FirstOffset, file.isUsing);
                             }
                             else if(file.isFAT == 1)
                             {
@@ -179,7 +163,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                     s=t;
                                 if(it.second->text(0) == QString::fromStdString(s))
                                 {
-                                    //P.RecycleBin(itemName.toStdString());
+                                    P.RecycleBin(itemName.toStdString());
                                 }
                             }
                             deletedItemList.erase(remove_if(deletedItemList.begin(), deletedItemList.end(), [item,parentItem](const pair<QTreeWidgetItem *, QTreeWidgetItem *> &p){
@@ -220,7 +204,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                 int index = parentItem->indexOfChild(item);
                                 parentItem->takeChild(index);
                                 rootBIN->addChild(item);
-                                //deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                                deleteFile_NTFS(file.FirstOffset,file.isUsing);
                             }
                             //Delete FAT File.txt
                             else if(file.isFAT == 1)
@@ -237,7 +221,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                     int index = parentItem->indexOfChild(item);
                                     parentItem->takeChild(index);
                                     rootBIN->addChild(item);
-                                   // P.deleteItem(file.Name,file.FirstOffset);
+                                   P.deleteItem(file.Name,file.FirstOffset);
                                 }
                             }
                         }
@@ -266,7 +250,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                 int index = parentItem->indexOfChild(item);
                                 parentItem->takeChild(index);
                                 rootBIN->addChild(item);
-                                //deleteFile_NTFS(file.FirstOffset,file.isUsing);
+                                deleteFile_NTFS(file.FirstOffset,file.isUsing);
                             }
                             //Delete FAT File/Folder
                             else if(file.isFAT == 1)
@@ -280,7 +264,7 @@ void MainWindow::showContextMenu(const QPoint &pos)
                                     int index = parentItem->indexOfChild(item);
                                     parentItem->takeChild(index);
                                     rootBIN->addChild(item);
-                                   // P.deleteItem(file.Name,file.FirstOffset);
+                                   P.deleteItem(file.Name,file.FirstOffset);
                                 }
                             }
                         }
